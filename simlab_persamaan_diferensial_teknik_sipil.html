@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimLab PD — Persamaan Diferensial untuk Teknik Sipil</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        blueprint: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom styling for engineering blueprint aesthetic & range sliders */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        .blueprint-grid {
+            background-size: 24px 24px;
+            background-image: 
+                linear-gradient(to right, rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+        }
+
+        .dark .blueprint-grid {
+            background-image: 
+                linear-gradient(to right, rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(56, 189, 248, 0.08) 1px, transparent 1px);
+        }
+
+        /* Custom Range Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 999px;
+            background: #cbd5e1;
+            outline: none;
+        }
+        .dark input[type="range"] {
+            background: #334155;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #0284c7;
+            cursor: pointer;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: #0369a1;
+        }
+
+        /* Smooth fade transition for tab panels */
+        .tab-panel {
+            animation: fadeIn 0.25s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.4);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 blueprint-grid min-h-screen flex flex-col">
+
+    <!-- Toast Notification Banner (Replaces alert()) -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-4">
+                <!-- Brand & Title -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-600 to-indigo-700 flex items-center justify-center text-white shadow-md shrink-0">
+                        <!-- Custom SVG Bridge + Integral Symbol Icon -->
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 17h18M5 17v-4a7 7 0 0114 0v4M8 17v-5.5M12 17v-7M16 17v-5.5" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-bold text-base sm:text-lg tracking-tight text-slate-900 dark:text-white leading-none">
+                                SimLab <span class="text-sky-600 dark:text-sky-400">PD</span>
+                            </h1>
+                            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
+                                Teknik Sipil
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Laboratorium Visual Persamaan Diferensial & Persiapan UAS</p>
+                    </div>
+                </div>
+
+                <!-- Right Controls: Theme Toggle & Quick Formula Reference -->
+                <div class="flex items-center gap-2">
+                    <button id="btn-cheat-sheet" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        <span class="hidden md:inline">Ringkasan Rumus UAS</span>
+                        <span class="md:hidden">Rumus</span>
+                    </button>
+
+                    <button id="btn-theme-toggle" aria-label="Ganti Tema" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition">
+                        <!-- Sun icon (shown in dark mode) -->
+                        <svg id="icon-sun" class="w-5 h-5 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <!-- Moon icon (shown in light mode) -->
+                        <svg id="icon-moon" class="w-5 h-5 block dark:hidden text-slate-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="flex overflow-x-auto no-scrollbar gap-1.5 pb-2.5 pt-1" role="tablist">
+                <button data-tab="tab-concept" class="nav-tab active px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 bg-sky-600 text-white shadow-sm">
+                    <span>1. Angka vs. Fungsi (Medan Arah)</span>
+                </button>
+                <button data-tab="tab-bridge" class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <span>2. Getaran Jembatan (PD Orde-2)</span>
+                </button>
+                <button data-tab="tab-chem" class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <span>3. Reaksi Kimia & Hidrasi (Sistem PD)</span>
+                </button>
+                <button data-tab="tab-beam" class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <span>4. Lendutan Balok (PD Orde-4)</span>
+                </button>
+                <button data-tab="tab-exam" class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <span>5. Latihan UAS & Tutor AI</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ===================================================================== -->
+        <!-- TAB 1: KONSEP DASAR (ANGKA VS FUNGSI & MEDAN ARAH / SLOPE FIELD)      -->
+        <!-- ===================================================================== -->
+        <section id="tab-concept" class="tab-panel space-y-6">
+            <!-- Conceptual Comparison Banner -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Algebraic Equation Card -->
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                            Persamaan Aljabar
+                        </span>
+                        <span class="text-xs font-mono text-slate-400">Solusi = Titik / Angka</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Yang dicari adalah sebuah <span class="text-amber-600 dark:text-amber-400 underline decoration-2">Angka (x)</span></h2>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">
+                        Misalnya pada keseimbangan statis gaya: <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300">2x - 6 = 0</code>. Jawabannya hanyalah satu bilangan tunggal, yaitu <strong>x = 3</strong>.
+                    </p>
+                    <div class="bg-slate-50 dark:bg-slate-950 rounded-xl p-3 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                        <span class="text-xs text-slate-500">Garis Bilangan:</span>
+                        <div class="flex items-center gap-3 font-mono text-xs">
+                            <span class="text-slate-400">0</span>
+                            <span class="text-slate-400">1</span>
+                            <span class="text-slate-400">2</span>
+                            <span class="px-2 py-1 rounded-full bg-amber-500 text-white font-bold shadow">x = 3</span>
+                            <span class="text-slate-400">4</span>
+                            <span class="text-slate-400">5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Differential Equation Card -->
+                <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border-2 border-sky-500/40 dark:border-sky-500/30 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
+                            Persamaan Diferensial (PD)
+                        </span>
+                        <span class="text-xs font-mono text-sky-600 dark:text-sky-400">Solusi = Kurva Fungsi y(t)</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Yang dicari adalah sebuah <span class="text-sky-600 dark:text-sky-400 underline decoration-2">Fungsi y(t)</span></h2>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">
+                        PD menyatakan hubungan antara fungsi dan laju perubahannya: <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-sky-700 dark:text-sky-300">dy/dt = r · y</code>. Solusinya adalah <strong>seluruh kurva fungsi</strong> <code class="font-mono font-semibold">y(t) = C·e^(rt)</code> yang menggambarkan perilaku sistem sepanjang waktu!
+                    </p>
+                    <div class="bg-sky-50/70 dark:bg-sky-950/40 rounded-xl p-3 border border-sky-200/70 dark:border-sky-900/50 text-xs text-sky-900 dark:text-sky-200">
+                        <strong>Intuisi Ujian:</strong> Solusi umum memiliki konstanta <strong>C</strong> (keluarga fungsi). Nilai awal <code class="font-mono">y(t₀) = y₀</code> memilih <em>satu</em> kurva unik dari keluarga fungsi tersebut.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Slope Field & Function Builder -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Controls Panel -->
+                <div class="lg:col-span-4 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+                    <div>
+                        <h3 class="font-bold text-base text-slate-900 dark:text-white">Eksplorasi Medan Arah (Slope Field)</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Setiap panah kecil menunjukkan kemiringan <code class="font-mono">dy/dt</code> di titik <code class="font-mono">(t, y)</code>. Fungsi solusi <code class="font-mono">y(t)</code> adalah kurva yang "mengalir" mengikuti panah-panah ini.
+                        </p>
+                    </div>
+
+                    <!-- ODE Model Selector -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                            Pilih Persamaan Diferensial:
+                        </label>
+                        <select id="sf-equation" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-mono focus:ring-2 focus:ring-sky-500 outline-none">
+                            <option value="exp">dy/dt = 0.45 · y (Pertumbuhan)</option>
+                            <option value="drain">dy/dt = -0.5 · y + 1.5 (Pengisian Tangki)</option>
+                            <option value="logistic">dy/dt = 0.7 · y · (1 - y/4) (Logistik)</option>
+                            <option value="periodic">dy/dt = cos(t) - 0.35 · y (Beban Periodik)</option>
+                        </select>
+                    </div>
+
+                    <!-- Analytical Formula Box -->
+                    <div class="p-3.5 rounded-xl bg-slate-900 text-sky-300 font-mono text-xs space-y-1.5 border border-slate-800">
+                        <div class="text-slate-400 text-[11px] uppercase tracking-wider">Solusi Fungsi Analitik y(t):</div>
+                        <div id="sf-analytical-formula" class="text-sm font-bold text-white break-words">y(t) = 1.50 · e^(0.45t)</div>
+                        <div id="sf-ic-label" class="text-emerald-400 text-[11px]">Syarat Awal: y(0.0) = 1.50</div>
+                    </div>
+
+                    <!-- Initial Condition Sliders -->
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Waktu Awal (t₀)</span>
+                                <span id="sf-t0-val" class="font-mono font-bold text-sky-600 dark:text-sky-400">0.0</span>
+                            </div>
+                            <input type="range" id="sf-t0" min="0" max="6" step="0.2" value="0" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Nilai Awal y(t₀) — Menentukan Konstanta C</span>
+                                <span id="sf-y0-val" class="font-mono font-bold text-sky-600 dark:text-sky-400">1.5</span>
+                            </div>
+                            <input type="range" id="sf-y0" min="-3.5" max="4.5" step="0.1" value="1.5" class="w-full">
+                        </div>
+                    </div>
+
+                    <!-- Euler Step Comparison Toggle -->
+                    <div class="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
+                        <label class="flex items-center gap-2.5 cursor-pointer">
+                            <input type="checkbox" id="sf-show-euler" checked class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500">
+                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">Tampilkan Hampiran Metode Euler (Δt)</span>
+                        </label>
+                        <div id="sf-euler-controls">
+                            <div class="flex justify-between text-xs text-slate-500 mb-1">
+                                <span>Ukuran Langkah (Δt)</span>
+                                <span id="sf-dt-val" class="font-mono font-bold text-amber-600 dark:text-amber-400">0.80 s</span>
+                            </div>
+                            <input type="range" id="sf-dt" min="0.1" max="1.6" step="0.1" value="0.8" class="w-full">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button id="sf-clear-family" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition">
+                            Hapus Jejak Kurva
+                        </button>
+                        <button id="sf-add-family" class="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white transition shadow-sm">
+                            + Simpan ke Keluarga Fungsi
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Interactive Slope Field Canvas -->
+                <div class="lg:col-span-8 bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div class="flex items-center gap-4 text-xs">
+                            <span class="flex items-center gap-1.5 font-medium">
+                                <span class="w-3 h-1 rounded-full bg-sky-500 inline-block"></span> Fungsi Eksak y(t)
+                            </span>
+                            <span class="flex items-center gap-1.5 font-medium">
+                                <span class="w-3 h-1 rounded-full bg-amber-500 inline-block"></span> Langkah Euler
+                            </span>
+                            <span class="flex items-center gap-1.5 font-medium text-slate-400">
+                                <span class="w-3 h-0.5 bg-slate-400 inline-block"></span> Keluarga Solusi (C berbeda)
+                            </span>
+                        </div>
+                        <span class="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+                            💡 Klik di mana saja pada grafik untuk memilih titik awal (t₀, y₀)
+                        </span>
+                    </div>
+
+                    <div class="relative flex-1 min-h-[360px] sm:min-h-[420px] w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                        <canvas id="canvas-slope-field" class="w-full h-full block cursor-crosshair"></canvas>
+                        <!-- Live Probe Readout -->
+                        <div id="sf-hover-readout" class="hidden absolute top-3 left-3 px-3 py-1.5 rounded-lg bg-slate-900/85 text-white font-mono text-xs backdrop-blur-sm pointer-events-none">
+                            t = 0.00 | y(t) = 0.00
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- TAB 2: GETARAN JEMBATAN (PD ORDE-2 LINEAR NON-HOMOGEN)                -->
+        <!-- ===================================================================== -->
+        <section id="tab-bridge" class="tab-panel hidden space-y-6">
+            <!-- Header & Governing Equation -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+                            Dinamika Struktur & Teknik Sipil
+                        </span>
+                        <span id="bridge-regime-badge" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                            Underdamped (ζ = 0.14)
+                        </span>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-1.5">Model Getaran Dek Jembatan (PD Orde-2)</h2>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">
+                        Simpangan vertikal jembatan <code class="font-mono font-bold text-sky-600 dark:text-sky-400">y(t)</code> merupakan fungsi waktu yang memenuhi hukum kedua Newton dengan kekakuan struktur <code class="font-mono">k</code> dan peredam <code class="font-mono">c</code>.
+                    </p>
+                </div>
+
+                <div class="bg-slate-900 text-white px-4 py-3 rounded-xl font-mono text-xs sm:text-sm border border-slate-800 shrink-0">
+                    <div class="text-slate-400 text-[11px] mb-1">Persamaan Diferensial Pengatur:</div>
+                    <div class="text-sky-300 font-bold">m·y''(t) + c·y'(t) + k·y(t) = F₀·cos(ωt)</div>
+                    <div id="bridge-numeric-ode" class="text-slate-300 text-xs mt-1">2.0y'' + 1.2y' + 18.0y = 5.0·cos(2.0t)</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Structural Parameter Controls -->
+                <div class="lg:col-span-4 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Parameter Jembatan</h3>
+                        <!-- Preset Scenarios -->
+                        <div class="flex gap-1">
+                            <button onclick="setBridgePreset('normal')" class="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition">Normal</button>
+                            <button onclick="setBridgePreset('resonance')" class="px-2 py-1 rounded-lg text-[11px] font-semibold bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 transition">Resonansi!</button>
+                            <button onclick="setBridgePreset('critical')" class="px-2 py-1 rounded-lg text-[11px] font-semibold bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 transition">Kritis</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Massa Bentang Jembatan (m)</span>
+                                <span id="br-m-val" class="font-mono font-bold text-sky-600 dark:text-sky-400">2.0 ton</span>
+                            </div>
+                            <input type="range" id="br-m" min="0.5" max="5.0" step="0.1" value="2.0" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Koefisien Redaman Damper (c)</span>
+                                <span id="br-c-val" class="font-mono font-bold text-sky-600 dark:text-sky-400">1.2 kNs/m</span>
+                            </div>
+                            <input type="range" id="br-c" min="0" max="20" step="0.2" value="1.2" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Kekakuan Lentur Struktur (k)</span>
+                                <span id="br-k-val" class="font-mono font-bold text-sky-600 dark:text-sky-400">18.0 kN/m</span>
+                            </div>
+                            <input type="range" id="br-k" min="4" max="40" step="0.5" value="18.0" class="w-full">
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-200 dark:border-slate-800">
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Amplitudo Beban Angin/Langkah (F₀)</span>
+                                <span id="br-f0-val" class="font-mono font-bold text-amber-600 dark:text-amber-400">5.0 kN</span>
+                            </div>
+                            <input type="range" id="br-f0" min="0" max="15" step="0.5" value="5.0" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Frekuensi Eksitasi Luar (ω)</span>
+                                <span id="br-w-val" class="font-mono font-bold text-amber-600 dark:text-amber-400">2.00 rad/s</span>
+                            </div>
+                            <input type="range" id="br-w" min="0.5" max="6.0" step="0.05" value="2.0" class="w-full">
+                            <div class="flex justify-between text-[11px] text-slate-400 mt-1 font-mono">
+                                <span>Frekuensi Alami ωₙ = <strong id="br-wn-display" class="text-slate-600 dark:text-slate-300">3.00</strong> rad/s</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                            <div>
+                                <div class="flex justify-between text-[11px] font-medium mb-1">
+                                    <span>Simpangan Awal y(0)</span>
+                                    <span id="br-y0-val" class="font-mono font-bold">0.5 m</span>
+                                </div>
+                                <input type="range" id="br-y0" min="-1.5" max="1.5" step="0.1" value="0.5" class="w-full">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[11px] font-medium mb-1">
+                                    <span>Kecepatan Awal y'(0)</span>
+                                    <span id="br-v0-val" class="font-mono font-bold">0.0 m/s</span>
+                                </div>
+                                <input type="range" id="br-v0" min="-2.0" max="2.0" step="0.1" value="0.0" class="w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Playback Controls -->
+                    <div class="flex gap-2 pt-2">
+                        <button id="br-toggle-play" class="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white transition shadow-sm">
+                            ⏸ Jeda Animasi
+                        </button>
+                        <button id="br-reset-time" class="py-2 px-3 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition">
+                            ↺ Reset t=0
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bridge Animation + Analytical Function Graph -->
+                <div class="lg:col-span-8 space-y-4">
+                    <!-- Physical Bridge Visual Canvas -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Visualisasi Fisik Bentang Jembatan</span>
+                            <span id="br-live-telemetry" class="font-mono text-xs text-sky-600 dark:text-sky-400 font-semibold">t = 0.00 s | y(t) = +0.500 m</span>
+                        </div>
+                        <div class="h-44 w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                            <canvas id="canvas-bridge-anim" class="w-full h-full block"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Analytical Function Solution Box -->
+                    <div class="bg-slate-900 text-slate-100 rounded-2xl p-4 border border-slate-800 shadow-sm space-y-2">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-sky-400">Solusi Fungsi Eksak: y(t) = y_homogen(t) + y_partikular(t)</span>
+                            <span id="br-char-roots" class="font-mono text-[11px] text-slate-400">Akar Karakteristik: r = -0.30 ± 2.98i</span>
+                        </div>
+                        <div id="br-exact-formula" class="font-mono text-xs sm:text-sm text-white bg-slate-950/80 p-3 rounded-xl border border-slate-800 overflow-x-auto">
+                            y(t) = e^(-0.30t) [ 0.00·cos(2.98t) + 0.05·sin(2.98t) ] + 0.50·cos(2.00t - 0.24)
+                        </div>
+                    </div>
+
+                    <!-- Function Graph y(t) Canvas -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs">
+                            <span class="font-bold text-slate-700 dark:text-slate-200">Grafik Fungsi Simpangan y(t) terhadap Waktu</span>
+                            <div class="flex items-center gap-3">
+                                <span class="flex items-center gap-1"><span class="w-3 h-1 bg-sky-500 inline-block rounded"></span> Total y(t)</span>
+                                <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-emerald-500 inline-block"></span> Solusi Homogen y_h(t)</span>
+                                <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-amber-500 inline-block"></span> Solusi Partikular y_p(t)</span>
+                            </div>
+                        </div>
+                        <div class="h-56 w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                            <canvas id="canvas-bridge-graph" class="w-full h-full block"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- TAB 3: REAKSI KIMIA & HIDRASI SEMEN (SISTEM PD ORDE-1)                -->
+        <!-- ===================================================================== -->
+        <section id="tab-chem" class="tab-panel hidden space-y-6">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                        Kimia Teknik & Pengolahan Air / Hidrasi Beton
+                    </span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-1.5">Reaksi Kimia Berantai: A → B → C (Sistem PD Orde-1)</h2>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">
+                        Memodelkan peluruhan polutan di instalasi pengolahan air atau reaksi hidrasi senyawa semen. Di sini kita menyelesaikan <strong>tiga fungsi yang saling terikat</strong>: <code class="font-mono font-bold text-rose-500">[A](t)</code>, <code class="font-mono font-bold text-amber-500">[B](t)</code>, dan <code class="font-mono font-bold text-emerald-500">[C](t)</code>.
+                    </p>
+                </div>
+
+                <div class="bg-slate-900 text-white px-4 py-3 rounded-xl font-mono text-xs border border-slate-800 shrink-0 space-y-1">
+                    <div class="text-rose-400">d[A]/dt = -k₁ · [A]</div>
+                    <div class="text-amber-400">d[B]/dt =  k₁ · [A] - k₂ · [B]</div>
+                    <div class="text-emerald-400">d[C]/dt =  k₂ · [B]</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Reaction Controls -->
+                <div class="lg:col-span-4 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Konstanta Laju & Konsentrasi Awal</h3>
+
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Konstanta Laju Reaksi 1 (k₁)</span>
+                                <span id="ch-k1-val" class="font-mono font-bold text-rose-600 dark:text-rose-400">0.50 /jam</span>
+                            </div>
+                            <input type="range" id="ch-k1" min="0.05" max="1.5" step="0.05" value="0.50" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Konstanta Laju Reaksi 2 (k₂)</span>
+                                <span id="ch-k2-val" class="font-mono font-bold text-amber-600 dark:text-amber-400">0.25 /jam</span>
+                            </div>
+                            <input type="range" id="ch-k2" min="0.05" max="1.5" step="0.05" value="0.25" class="w-full">
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-200 dark:border-slate-800">
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Konsentrasi Awal Reaktan [A]₀</span>
+                                <span id="ch-a0-val" class="font-mono font-bold text-sky-600 dark:text-sky-400">100 mg/L</span>
+                            </div>
+                            <input type="range" id="ch-a0" min="20" max="100" step="5" value="100" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Konsentrasi Awal Zat Antara [B]₀</span>
+                                <span id="ch-b0-val" class="font-mono font-bold text-sky-600 dark:text-sky-400">0 mg/L</span>
+                            </div>
+                            <input type="range" id="ch-b0" min="0" max="50" step="5" value="0" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Inspeksi Waktu (t)</span>
+                                <span id="ch-t-val" class="font-mono font-bold text-emerald-600 dark:text-emerald-400">3.0 jam</span>
+                            </div>
+                            <input type="range" id="ch-t" min="0" max="15" step="0.1" value="3.0" class="w-full">
+                        </div>
+                    </div>
+
+                    <!-- Analytical Functions Summary -->
+                    <div class="p-3.5 rounded-xl bg-slate-900 text-slate-200 font-mono text-[11px] space-y-2 border border-slate-800">
+                        <div class="text-slate-400 uppercase tracking-wider">Solusi Analitik Fungsi Konsentrasi:</div>
+                        <div id="ch-eq-a" class="text-rose-400">[A](t) = 100 · e^(-0.50t)</div>
+                        <div id="ch-eq-b" class="text-amber-400">[B](t) = 200 · (e^(-0.25t) - e^(-0.50t))</div>
+                        <div id="ch-eq-c" class="text-emerald-400">[C](t) = 100 - [A](t) - [B](t)</div>
+                    </div>
+                </div>
+
+                <!-- Reactor Visual + Concentration Curves -->
+                <div class="lg:col-span-8 space-y-4">
+                    <!-- Reactor Tank Telemetry -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
+                            <div class="text-xs text-slate-500 dark:text-slate-400">Reaktan Primer [A](t)</div>
+                            <div id="ch-read-a" class="text-2xl font-mono font-bold text-rose-600 dark:text-rose-400 mt-1">22.31 mg/L</div>
+                            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                                <div id="ch-bar-a" class="bg-rose-500 h-full transition-all duration-150" style="width: 22%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
+                            <div class="text-xs text-slate-500 dark:text-slate-400">Zat Antara [B](t)</div>
+                            <div id="ch-read-b" class="text-2xl font-mono font-bold text-amber-600 dark:text-amber-400 mt-1">49.85 mg/L</div>
+                            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                                <div id="ch-bar-b" class="bg-amber-500 h-full transition-all duration-150" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
+                            <div class="text-xs text-slate-500 dark:text-slate-400">Produk Akhir [C](t)</div>
+                            <div id="ch-read-c" class="text-2xl font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">27.84 mg/L</div>
+                            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                                <div id="ch-bar-c" class="bg-emerald-500 h-full transition-all duration-150" style="width: 28%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chemical Curves Canvas -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3 text-xs">
+                            <span class="font-bold text-slate-700 dark:text-slate-200">Evolusi Tiga Fungsi Konsentrasi Terhadap Waktu</span>
+                            <span id="ch-peak-info" class="font-mono text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2.5 py-1 rounded-lg">
+                                Puncak [B]_maks = 50.00 mg/L pada t = 2.77 jam
+                            </span>
+                        </div>
+                        <div class="h-72 sm:h-80 w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                            <canvas id="canvas-chem" class="w-full h-full block"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- TAB 4: LENDUTAN BALOK STRUKTURAL (PD ORDE-4 EULER-BERNOULLI)          -->
+        <!-- ===================================================================== -->
+        <section id="tab-beam" class="tab-panel hidden space-y-6">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
+                        Analisis Struktur (Masalah Nilai Batas)
+                    </span>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-1.5">Kurva Elastis & Lendutan Balok y(x) (PD Orde-4)</h2>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">
+                        Dalam Teknik Sipil, bentuk lendutan balok <code class="font-mono font-bold text-sky-600 dark:text-sky-400">y(x)</code> diperoleh dengan mengintegrasikan persamaan diferensial Euler-Bernoulli 4 kali dengan <strong>Syarat Batas Tumpuan</strong>.
+                    </p>
+                </div>
+
+                <div class="bg-slate-900 text-white px-4 py-3 rounded-xl font-mono text-xs border border-slate-800 shrink-0">
+                    <div class="text-sky-300 font-bold">EI · d⁴y/dx⁴ = -q(x)</div>
+                    <div class="text-slate-400 text-[11px] mt-1">V(x) = EI·y''' | M(x) = EI·y'' | θ(x) = y'</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Beam Controls -->
+                <div class="lg:col-span-4 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                            Jenis Tumpuan (Syarat Batas):
+                        </label>
+                        <select id="bm-support" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-sky-500">
+                            <option value="simple">Sendi - Rol (Simply Supported)</option>
+                            <option value="cantilever">Jepit - Bebas (Kantilever)</option>
+                            <option value="fixed">Jepit - Jepit (Fixed-Fixed)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Panjang Bentang Balok (L)</span>
+                                <span id="bm-l-val" class="font-mono font-bold text-sky-600 dark:text-sky-400">6.0 m</span>
+                            </div>
+                            <input type="range" id="bm-l" min="2" max="12" step="0.5" value="6.0" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Beban Merata (q)</span>
+                                <span id="bm-q-val" class="font-mono font-bold text-amber-600 dark:text-amber-400">15.0 kN/m</span>
+                            </div>
+                            <input type="range" id="bm-q" min="2" max="40" step="1" value="15.0" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-medium mb-1">
+                                <span>Kekakuan Lentur (EI)</span>
+                                <span id="bm-ei-val" class="font-mono font-bold text-emerald-600 dark:text-emerald-400">10,000 kNm²</span>
+                            </div>
+                            <input type="range" id="bm-ei" min="2000" max="25000" step="500" value="10000" class="w-full">
+                        </div>
+                    </div>
+
+                    <!-- Boundary Conditions Explanation -->
+                    <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                        <div class="font-bold text-slate-800 dark:text-slate-200">Syarat Batas (Boundary Conditions):</div>
+                        <div id="bm-bc-text" class="font-mono text-slate-600 dark:text-slate-400 space-y-1">
+                            <div>• y(0) = 0, y(L) = 0 (Tanpa lendutan di tumpuan)</div>
+                            <div>• y''(0) = 0, y''(L) = 0 (Momen ujung = 0)</div>
+                        </div>
+                    </div>
+
+                    <!-- Analytical Function Formula -->
+                    <div class="p-3.5 rounded-xl bg-slate-900 text-sky-300 font-mono text-xs space-y-1.5 border border-slate-800">
+                        <div class="text-slate-400 text-[11px] uppercase">Fungsi Kurva Elastis y(x):</div>
+                        <div id="bm-formula" class="text-white font-semibold leading-relaxed">
+                            y(x) = -qx(L³ - 2Lx² + x³) / (24EI)
+                        </div>
+                        <div id="bm-max-deflection" class="text-amber-400 pt-1">
+                            Lendutan Maksimum |y|_maks = 25.31 mm
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Beam Diagrams Canvas -->
+                <div class="lg:col-span-8 bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+                    <div class="flex items-center justify-between mb-3 text-xs">
+                        <span class="font-bold text-slate-700 dark:text-slate-200">Rantai Integrasi PD: Beban q(x) → Momen M(x) → Fungsi Lendutan y(x)</span>
+                        <span class="text-slate-400 font-mono">Skala lendutan diperbesar untuk visualisasi</span>
+                    </div>
+                    <div class="flex-1 min-h-[400px] w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                        <canvas id="canvas-beam" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- TAB 5: LATIHAN SOAL UAS & TUTOR AI PERSAMAAN DIFERENSIAL              -->
+        <!-- ===================================================================== -->
+        <section id="tab-exam" class="tab-panel hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Curated Civil Engineering Exam Practice Problems -->
+                <div class="lg:col-span-6 space-y-4">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Bank Soal Latihan UAS Teknik Sipil</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Pelajari langkah-langkah analitik menemukan <strong>fungsi solusi</strong> dari persamaan diferensial.
+                        </p>
+
+                        <div class="mt-4 space-y-3" id="exam-problems-list">
+                            <!-- Problem 1 -->
+                            <details class="group rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 overflow-hidden" open>
+                                <summary class="p-4 cursor-pointer font-semibold text-sm flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                                    <span>Soal 1: PD Orde-1 Linear (Pengurasan Tangki / Faktor Integrasi)</span>
+                                    <span class="text-xs font-mono text-sky-600 dark:text-sky-400 group-open:rotate-180 transition-transform">▼</span>
+                                </summary>
+                                <div class="p-4 pt-0 text-xs sm:text-sm text-slate-700 dark:text-slate-300 space-y-2 border-t border-slate-200/70 dark:border-slate-800">
+                                    <p class="font-medium text-slate-900 dark:text-white mt-2">
+                                        Tentukan fungsi tinggi muka air <code class="font-mono">h(t)</code> yang memenuhi:
+                                        <code class="font-mono bg-slate-200/70 dark:bg-slate-800 px-1.5 py-0.5 rounded">dh/dt + 0.2h = 4</code> dengan syarat awal <code class="font-mono">h(0) = 5</code> meter.
+                                    </p>
+                                    <div class="p-3 rounded-lg bg-white dark:bg-slate-900 font-mono text-xs space-y-1 border border-slate-200 dark:border-slate-800">
+                                        <div class="text-sky-600 dark:text-sky-400 font-bold">Langkah Penyelesaian:</div>
+                                        <div>1. Faktor Integrasi: μ(t) = e^(∫0.2 dt) = e^(0.2t)</div>
+                                        <div>2. Kalikan PD dengan μ(t): d/dt [ h(t)·e^(0.2t) ] = 4·e^(0.2t)</div>
+                                        <div>3. Integralkan kedua ruas: h(t)·e^(0.2t) = 20·e^(0.2t) + C</div>
+                                        <div>4. Solusi Umum (Keluarga Fungsi): h(t) = 20 + C·e^(-0.2t)</div>
+                                        <div>5. Substitusi h(0) = 5 → 5 = 20 + C → C = -15</div>
+                                        <div class="text-emerald-600 dark:text-emerald-400 font-bold pt-1">Jadi Fungsi Solusi: h(t) = 20 - 15·e^(-0.2t)</div>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <!-- Problem 2 -->
+                            <details class="group rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 overflow-hidden">
+                                <summary class="p-4 cursor-pointer font-semibold text-sm flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                                    <span>Soal 2: PD Orde-2 Homogen (Getaran Bebas Teredam)</span>
+                                    <span class="text-xs font-mono text-sky-600 dark:text-sky-400 group-open:rotate-180 transition-transform">▼</span>
+                                </summary>
+                                <div class="p-4 pt-0 text-xs sm:text-sm text-slate-700 dark:text-slate-300 space-y-2 border-t border-slate-200/70 dark:border-slate-800">
+                                    <p class="font-medium text-slate-900 dark:text-white mt-2">
+                                        Selesaikan persamaan getaran bebas kolom gedung:
+                                        <code class="font-mono bg-slate-200/70 dark:bg-slate-800 px-1.5 py-0.5 rounded">y'' + 4y' + 13y = 0</code> dengan <code class="font-mono">y(0) = 2</code> dan <code class="font-mono">y'(0) = -1</code>.
+                                    </p>
+                                    <div class="p-3 rounded-lg bg-white dark:bg-slate-900 font-mono text-xs space-y-1 border border-slate-200 dark:border-slate-800">
+                                        <div class="text-sky-600 dark:text-sky-400 font-bold">Langkah Penyelesaian:</div>
+                                        <div>1. Persamaan Karakteristik: r² + 4r + 13 = 0</div>
+                                        <div>2. Akar kompleks: r = (-4 ± √(16 - 52)) / 2 = -2 ± 3i</div>
+                                        <div>3. Bentuk fungsi osilasi teredam: y(t) = e^(-2t)(C₁·cos(3t) + C₂·sin(3t))</div>
+                                        <div>4. Dari y(0) = 2 → C₁ = 2</div>
+                                        <div>5. Turunkan y'(t): y'(0) = -2C₁ + 3C₂ = -1 → -4 + 3C₂ = -1 → C₂ = 1</div>
+                                        <div class="text-emerald-600 dark:text-emerald-400 font-bold pt-1">Jadi Fungsi Solusi: y(t) = e^(-2t)(2·cos(3t) + sin(3t))</div>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <!-- Problem 3 -->
+                            <details class="group rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 overflow-hidden">
+                                <summary class="p-4 cursor-pointer font-semibold text-sm flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                                    <span>Soal 3: PD Orde-2 Tak Homogen (Koefisien Tak Tentu)</span>
+                                    <span class="text-xs font-mono text-sky-600 dark:text-sky-400 group-open:rotate-180 transition-transform">▼</span>
+                                </summary>
+                                <div class="p-4 pt-0 text-xs sm:text-sm text-slate-700 dark:text-slate-300 space-y-2 border-t border-slate-200/70 dark:border-slate-800">
+                                    <p class="font-medium text-slate-900 dark:text-white mt-2">
+                                        Cari solusi umum fungsi <code class="font-mono">y(t)</code> dari:
+                                        <code class="font-mono bg-slate-200/70 dark:bg-slate-800 px-1.5 py-0.5 rounded">y'' - 3y' + 2y = 4e^(3t)</code>.
+                                    </p>
+                                    <div class="p-3 rounded-lg bg-white dark:bg-slate-900 font-mono text-xs space-y-1 border border-slate-200 dark:border-slate-800">
+                                        <div class="text-sky-600 dark:text-sky-400 font-bold">Langkah Penyelesaian:</div>
+                                        <div>1. Homogen: r² - 3r + 2 = 0 → (r - 1)(r - 2) = 0 → r₁=1, r₂=2</div>
+                                        <div>   y_h(t) = C₁·e^t + C₂·e^(2t)</div>
+                                        <div>2. Tebakan Partikular: y_p(t) = A·e^(3t)</div>
+                                        <div>3. Substitusi ke PD: 9A·e^(3t) - 9A·e^(3t) + 2A·e^(3t) = 4e^(3t)</div>
+                                        <div>   2A = 4 → A = 2 → y_p(t) = 2e^(3t)</div>
+                                        <div class="text-emerald-600 dark:text-emerald-400 font-bold pt-1">Solusi Umum: y(t) = C₁·e^t + C₂·e^(2t) + 2e^(3t)</div>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive AI Study Assistant (Gemini API) -->
+                <div class="lg:col-span-6 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-bold text-base text-slate-900 dark:text-white">Asisten Dosen Persamaan Diferensial (AI)</h3>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">Gemini</span>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Minta soal latihan baru atau tanyakan langkah penyelesaian PD.</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Prompt Chips -->
+                    <div class="flex flex-wrap gap-1.5 py-3">
+                        <button onclick="askAiPreset('Buatkan 1 soal latihan UAS Teknik Sipil tentang getaran jembatan (PD Orde-2) beserta langkah penyelesaian lengkapnya.')" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:hover:bg-sky-900/60 dark:text-sky-300 border border-sky-200/70 dark:border-sky-800 transition">
+                            + Soal Getaran Jembatan
+                        </button>
+                        <button onclick="askAiPreset('Buatkan 1 soal PD Orde-1 tentang reaksi kimia / peluruhan polutan air dan jelaskan mengapa jawabannya berupa fungsi, bukan angka.')" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800 transition">
+                            + Soal Reaksi Kimia
+                        </button>
+                        <button onclick="askAiPreset('Jelaskan kapan kita memakai metode Faktor Integrasi vs Persamaan Karakteristik pada ujian persamaan diferensial.')" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800 transition">
+                            ? Strategi Pilih Metode
+                        </button>
+                    </div>
+
+                    <!-- AI Chat Output Box -->
+                    <div id="ai-chat-history" class="flex-1 min-h-[260px] max-h-[380px] overflow-y-auto p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3 text-xs sm:text-sm">
+                        <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                            Halo rekan mahasiswa Teknik Sipil! Saya siap membantu persiapan UAS Persamaan Diferensial Anda. Silakan ketik persamaan diferensial yang ingin Anda pecahkan atau klik tombol soal latihan di atas.
+                        </div>
+                    </div>
+
+                    <!-- Input Form -->
+                    <form id="ai-chat-form" class="mt-3 flex gap-2">
+                        <input type="text" id="ai-user-input" placeholder="Contoh: Selesaikan y'' + 5y' + 6y = 0, y(0)=1, y'(0)=0..." class="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2.5 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                        <button type="submit" id="ai-submit-btn" class="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm shrink-0">
+                            Kirim
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Formula Cheat Sheet Modal (Hidden by default) -->
+    <div id="modal-cheat-sheet" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Ringkasan Metode Penyelesaian PD (Persiapan UAS)</h3>
+                <button id="btn-close-modal" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                    ✕
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs sm:text-sm">
+                <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div class="font-bold text-sky-600 dark:text-sky-400">1. PD Orde-1 Terpisah (Separable)</div>
+                    <div class="font-mono text-xs mt-1">dy/dx = g(x)·h(y)  ⇒  ∫ (1/h(y)) dy = ∫ g(x) dx + C</div>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div class="font-bold text-sky-600 dark:text-sky-400">2. PD Orde-1 Linear (Faktor Integrasi)</div>
+                    <div class="font-mono text-xs mt-1">dy/dx + P(x)y = Q(x)  ⇒  μ(x) = e^(∫P(x)dx)</div>
+                    <div class="font-mono text-xs mt-0.5 text-emerald-600 dark:text-emerald-400">y(x) = (1/μ(x)) [ ∫ μ(x)Q(x) dx + C ]</div>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div class="font-bold text-indigo-600 dark:text-indigo-400">3. PD Orde-2 Koefisien Konstan: ay'' + by' + cy = 0</div>
+                    <ul class="font-mono text-xs mt-1 space-y-1 text-slate-700 dark:text-slate-300">
+                        <li>• Akar Riil Berbeda (r₁ ≠ r₂): y(t) = C₁·e^(r₁t) + C₂·e^(r₂t)</li>
+                        <li>• Akar Riil Kembar (r₁ = r₂ = r): y(t) = (C₁ + C₂·t)·e^(rt)</li>
+                        <li>• Akar Kompleks (α ± βi): y(t) = e^(αt) [ C₁·cos(βt) + C₂·sin(βt) ]</li>
+                    </ul>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div class="font-bold text-amber-600 dark:text-amber-400">4. Aplikasi Teknik Sipil</div>
+                    <ul class="text-xs mt-1 space-y-1 text-slate-600 dark:text-slate-300">
+                        <li>• <strong>Getaran Jembatan:</strong> m·y'' + c·y' + k·y = F(t) (Syarat Awal: y(0), y'(0))</li>
+                        <li>• <strong>Lendutan Balok:</strong> EI·y'''' = -q(x) (Syarat Batas di x=0 dan x=L)</li>
+                        <li>• <strong>Hidrasi / Reaksi Kimia:</strong> dC/dt = -k·C (Peluruhan eksponensial)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- JAVASCRIPT LOGIC: SIMULATIONS, CANVAS RENDERING, AND AI TUTOR             -->
+    <!-- ========================================================================= -->
+    <script>
+        // -------------------------------------------------------------------------
+        // 1. GLOBAL UTILITIES: THEME, TABS, TOAST NOTIFICATIONS, RETINA CANVAS
+        // -------------------------------------------------------------------------
+        const state = {
+            activeTab: 'tab-concept',
+            isDark: false,
+            // Slope Field State
+            sf: {
+                eq: 'exp',
+                t0: 0.0,
+                y0: 1.5,
+                dt: 0.8,
+                showEuler: true,
+                familyCurves: [
+                    { t0: 0, y0: 0.5 },
+                    { t0: 0, y0: -1.0 },
+                    { t0: 0, y0: 2.5 }
+                ],
+                hover: null
+            },
+            // Bridge Vibration State
+            bridge: {
+                m: 2.0,
+                c: 1.2,
+                k: 18.0,
+                f0: 5.0,
+                w: 2.0,
+                y0: 0.5,
+                v0: 0.0,
+                playing: true,
+                simTime: 0,
+                lastTimestamp: null
+            },
+            // Chemical Reaction State
+            chem: {
+                k1: 0.50,
+                k2: 0.25,
+                a0: 100,
+                b0: 0,
+                tInspect: 3.0
+            },
+            // Beam Deflection State
+            beam: {
+                support: 'simple',
+                L: 6.0,
+                q: 15.0,
+                EI: 10000
+            }
+        };
+
+        // Toast Notification System (No alert())
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = {
+                info: 'bg-slate-900 text-white border-sky-500',
+                success: 'bg-emerald-900 text-white border-emerald-400',
+                warn: 'bg-amber-900 text-white border-amber-400'
+            };
+            toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl border-l-4 shadow-lg text-xs font-medium transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // High-DPI Retina Canvas Resizer
+        function prepareCanvas(canvas) {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const width = Math.max(100, rect.width);
+            const height = Math.max(100, rect.height);
+            if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
+                canvas.width = Math.floor(width * dpr);
+                canvas.height = Math.floor(height * dpr);
+            }
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            return { ctx, width, height };
+        }
+
+        // Theme Toggle
+        document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+            state.isDark = !state.isDark;
+            document.documentElement.classList.toggle('dark', state.isDark);
+            redrawAllActive();
+        });
+
+        // Cheat Sheet Modal
+        const modal = document.getElementById('modal-cheat-sheet');
+        document.getElementById('btn-cheat-sheet').addEventListener('click', () => modal.classList.remove('hidden'));
+        document.getElementById('btn-close-modal').addEventListener('click', () => modal.classList.add('hidden'));
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+
+        // Tab Switching
+        document.querySelectorAll('.nav-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-tab');
+                state.activeTab = targetId;
+
+                document.querySelectorAll('.nav-tab').forEach(b => {
+                    b.classList.remove('bg-sky-600', 'text-white', 'shadow-sm');
+                    b.classList.add('bg-slate-100', 'text-slate-600', 'dark:bg-slate-800/80', 'dark:text-slate-300');
+                });
+                btn.classList.remove('bg-slate-100', 'text-slate-600', 'dark:bg-slate-800/80', 'dark:text-slate-300');
+                btn.classList.add('bg-sky-600', 'text-white', 'shadow-sm');
+
+                document.querySelectorAll('.tab-panel').forEach(panel => {
+                    panel.classList.toggle('hidden', panel.id !== targetId);
+                });
+
+                // Redraw newly visible canvas after layout settles
+                requestAnimationFrame(redrawAllActive);
+            });
+        });
+
+        // -------------------------------------------------------------------------
+        // 2. MODULE 1: SLOPE FIELD & FUNCTION SOLUTION (dy/dt = f(t, y))
+        // -------------------------------------------------------------------------
+        const sfEquations = {
+            exp: {
+                f: (t, y) => 0.45 * y,
+                exact: (t, t0, y0) => y0 * Math.exp(0.45 * (t - t0)),
+                formatFormula: (t0, y0) => {
+                    const c = y0 * Math.exp(-0.45 * t0);
+                    return `y(t) = ${c.toFixed(2)} · e^(0.45t)`;
+                }
+            },
+            drain: {
+                f: (t, y) => -0.5 * y + 1.5,
+                exact: (t, t0, y0) => 3.0 + (y0 - 3.0) * Math.exp(-0.5 * (t - t0)),
+                formatFormula: (t0, y0) => {
+                    const c = (y0 - 3.0) * Math.exp(0.5 * t0);
+                    const sign = c >= 0 ? '+' : '-';
+                    return `y(t) = 3.00 ${sign} ${Math.abs(c).toFixed(2)} · e^(-0.50t)`;
+                }
+            },
+            logistic: {
+                f: (t, y) => 0.7 * y * (1 - y / 4.0),
+                exact: (t, t0, y0) => {
+                    if (Math.abs(y0) < 1e-5) return 0;
+                    if (Math.abs(y0 - 4) < 1e-5) return 4;
+                    const A = (4 - y0) / y0;
+                    return 4 / (1 + A * Math.exp(-0.7 * (t - t0)));
+                },
+                formatFormula: (t0, y0) => {
+                    if (Math.abs(y0) < 1e-4) return `y(t) = 0 (Solusi Kesetimbangan)`;
+                    const A = ((4 - y0) / y0) * Math.exp(0.7 * t0);
+                    return `y(t) = 4 / (1 + ${A.toFixed(2)}·e^(-0.70t))`;
+                }
+            },
+            periodic: {
+                f: (t, y) => Math.cos(t) - 0.35 * y,
+                exact: (t, t0, y0) => {
+                    // Analytical solution for y' + 0.35y = cos(t)
+                    const a = 0.35;
+                    const denom = a * a + 1;
+                    const yp = (tVal) => (a * Math.cos(tVal) + Math.sin(tVal)) / denom;
+                    const c = (y0 - yp(t0)) * Math.exp(a * t0);
+                    return c * Math.exp(-a * t) + yp(t);
+                },
+                formatFormula: (t0, y0) => {
+                    const a = 0.35;
+                    const denom = a * a + 1;
+                    const yp0 = (a * Math.cos(t0) + Math.sin(t0)) / denom;
+                    const c = (y0 - yp0) * Math.exp(a * t0);
+                    return `y(t) = ${c.toFixed(2)}·e^(-0.35t) + 0.31·cos(t) + 0.89·sin(t)`;
+                }
+            }
+        };
+
+        function drawSlopeField() {
+            const canvas = document.getElementById('canvas-slope-field');
+            if (!canvas) return;
+            const { ctx, width, height } = prepareCanvas(canvas);
+            const isDark = state.isDark;
+
+            const tMin = 0, tMax = 8;
+            const yMin = -4, yMax = 5;
+
+            const toPxX = (t) => ((t - tMin) / (tMax - tMin)) * width;
+            const toPxY = (y) => height - ((y - yMin) / (yMax - yMin)) * height;
+            const fromPxX = (px) => tMin + (px / width) * (tMax - tMin);
+            const fromPxY = (py) => yMin + ((height - py) / height) * (yMax - yMin);
+
+            // Store coordinate converters for mouse click/hover
+            canvas._coords = { toPxX, toPxY, fromPxX, fromPxY };
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Grid lines & Axes
+            ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(100, 116, 139, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.font = '11px JetBrains Mono';
+            ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
+
+            for (let t = 0; t <= tMax; t += 1) {
+                const x = toPxX(t);
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+                if (t > 0 && t < tMax) ctx.fillText(`t=${t}`, x + 3, toPxY(0) - 5);
+            }
+
+            for (let y = Math.ceil(yMin); y <= Math.floor(yMax); y += 1) {
+                const py = toPxY(y);
+                ctx.beginPath();
+                ctx.moveTo(0, py);
+                ctx.lineTo(width, py);
+                ctx.stroke();
+                if (y !== 0) ctx.fillText(`${y}`, 6, py - 4);
+            }
+
+            // Highlight y = 0 axis
+            ctx.strokeStyle = isDark ? 'rgba(226, 232, 240, 0.35)' : 'rgba(51, 65, 85, 0.35)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, toPxY(0));
+            ctx.lineTo(width, toPxY(0));
+            ctx.stroke();
+
+            const model = sfEquations[state.sf.eq];
+
+            // Draw Direction Field Arrows (Slope Field)
+            const cols = 22;
+            const rows = 16;
+            const arrowLen = Math.min(width / cols, height / rows) * 0.52;
+            ctx.strokeStyle = isDark ? 'rgba(56, 189, 248, 0.35)' : 'rgba(2, 132, 199, 0.32)';
+            ctx.lineWidth = 1.3;
+
+            for (let i = 0; i <= cols; i++) {
+                const t = tMin + (i / cols) * (tMax - tMin);
+                for (let j = 0; j <= rows; j++) {
+                    const y = yMin + (j / rows) * (yMax - yMin);
+                    const slope = model.f(t, y);
+                    // Convert mathematical slope dy/dt into screen angle
+                    const dxPx = width / (tMax - tMin);
+                    const dyPx = -height / (yMax - yMin);
+                    const angle = Math.atan2(slope * dyPx, dxPx);
+
+                    const cx = toPxX(t);
+                    const cy = toPxY(y);
+                    const hx = Math.cos(angle) * (arrowLen / 2);
+                    const hy = Math.sin(angle) * (arrowLen / 2);
+
+                    ctx.beginPath();
+                    ctx.moveTo(cx - hx, cy - hy);
+                    ctx.lineTo(cx + hx, cy + hy);
+                    ctx.stroke();
+
+                    // Tiny arrowhead dot
+                    ctx.fillStyle = isDark ? 'rgba(56, 189, 248, 0.5)' : 'rgba(2, 132, 199, 0.45)';
+                    ctx.beginPath();
+                    ctx.arc(cx + hx, cy + hy, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Draw Saved Family of Solution Curves (Illustrating Constant C)
+            state.sf.familyCurves.forEach(fc => {
+                ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.35)' : 'rgba(100, 116, 139, 0.35)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                let started = false;
+                for (let px = 0; px <= width; px += 3) {
+                    const t = fromPxX(px);
+                    const y = model.exact(t, fc.t0, fc.y0);
+                    if (y >= yMin - 2 && y <= yMax + 2 && isFinite(y)) {
+                        const py = toPxY(y);
+                        if (!started) { ctx.moveTo(px, py); started = true; }
+                        else ctx.lineTo(px, py);
+                    } else {
+                        started = false;
+                    }
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+
+            // Draw Primary Exact Analytical Function Curve y(t)
+            ctx.strokeStyle = '#0ea5e9';
+            ctx.lineWidth = 3.2;
+            ctx.beginPath();
+            let startedMain = false;
+            for (let px = 0; px <= width; px += 2) {
+                const t = fromPxX(px);
+                const y = model.exact(t, state.sf.t0, state.sf.y0);
+                if (y >= yMin - 3 && y <= yMax + 3 && isFinite(y)) {
+                    const py = toPxY(y);
+                    if (!startedMain) { ctx.moveTo(px, py); startedMain = true; }
+                    else ctx.lineTo(px, py);
+                } else {
+                    startedMain = false;
+                }
+            }
+            ctx.stroke();
+
+            // Draw Euler Method Step-by-Step Approximation (Forward from t0)
+            if (state.sf.showEuler) {
+                const dt = state.sf.dt;
+                let tCurr = state.sf.t0;
+                let yCurr = state.sf.y0;
+
+                ctx.strokeStyle = '#f59e0b';
+                ctx.fillStyle = '#f59e0b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(toPxX(tCurr), toPxY(yCurr));
+
+                while (tCurr < tMax && Math.abs(yCurr) < 20) {
+                    const slope = model.f(tCurr, yCurr);
+                    tCurr += dt;
+                    yCurr += slope * dt;
+                    const px = toPxX(tCurr);
+                    const py = toPxY(yCurr);
+                    ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // Draw step nodes
+                tCurr = state.sf.t0;
+                yCurr = state.sf.y0;
+                while (tCurr < tMax && Math.abs(yCurr) < 20) {
+                    const slope = model.f(tCurr, yCurr);
+                    tCurr += dt;
+                    yCurr += slope * dt;
+                    ctx.beginPath();
+                    ctx.arc(toPxX(tCurr), toPxY(yCurr), 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Draw Initial Condition Anchor Point (t0, y0)
+            const ix = toPxX(state.sf.t0);
+            const iy = toPxY(state.sf.y0);
+            ctx.fillStyle = '#10b981';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(ix, iy, 6.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Update Formula Text
+            document.getElementById('sf-analytical-formula').textContent = model.formatFormula(state.sf.t0, state.sf.y0);
+            document.getElementById('sf-ic-label').textContent = `Syarat Awal: y(${state.sf.t0.toFixed(1)}) = ${state.sf.y0.toFixed(2)}`;
+        }
+
+        // Slope Field Event Listeners
+        function bindSlopeFieldEvents() {
+            const eqSelect = document.getElementById('sf-equation');
+            const t0Slider = document.getElementById('sf-t0');
+            const y0Slider = document.getElementById('sf-y0');
+            const dtSlider = document.getElementById('sf-dt');
+            const eulerCheck = document.getElementById('sf-show-euler');
+            const canvas = document.getElementById('canvas-slope-field');
+            const readout = document.getElementById('sf-hover-readout');
+
+            eqSelect.addEventListener('change', (e) => {
+                state.sf.eq = e.target.value;
+                drawSlopeField();
+            });
+
+            t0Slider.addEventListener('input', (e) => {
+                state.sf.t0 = parseFloat(e.target.value);
+                document.getElementById('sf-t0-val').textContent = state.sf.t0.toFixed(1);
+                drawSlopeField();
+            });
+
+            y0Slider.addEventListener('input', (e) => {
+                state.sf.y0 = parseFloat(e.target.value);
+                document.getElementById('sf-y0-val').textContent = state.sf.y0.toFixed(1);
+                drawSlopeField();
+            });
+
+            dtSlider.addEventListener('input', (e) => {
+                state.sf.dt = parseFloat(e.target.value);
+                document.getElementById('sf-dt-val').textContent = `${state.sf.dt.toFixed(2)} s`;
+                drawSlopeField();
+            });
+
+            eulerCheck.addEventListener('change', (e) => {
+                state.sf.showEuler = e.target.checked;
+                document.getElementById('sf-euler-controls').style.opacity = e.target.checked ? '1' : '0.4';
+                drawSlopeField();
+            });
+
+            document.getElementById('sf-add-family').addEventListener('click', () => {
+                state.sf.familyCurves.push({ t0: state.sf.t0, y0: state.sf.y0 });
+                drawSlopeField();
+                showToast('Kurva fungsi ditambahkan ke himpunan keluarga solusi!', 'success');
+            });
+
+            document.getElementById('sf-clear-family').addEventListener('click', () => {
+                state.sf.familyCurves = [];
+                drawSlopeField();
+                showToast('Jejak keluarga kurva dibersihkan.', 'info');
+            });
+
+            // Click on canvas sets new initial condition (t0, y0)
+            canvas.addEventListener('click', (e) => {
+                if (!canvas._coords) return;
+                const rect = canvas.getBoundingClientRect();
+                const t = Math.max(0, Math.min(6, canvas._coords.fromPxX(e.clientX - rect.left)));
+                const y = Math.max(-3.5, Math.min(4.5, canvas._coords.fromPxY(e.clientY - rect.top)));
+                state.sf.t0 = Math.round(t * 10) / 10;
+                state.sf.y0 = Math.round(y * 10) / 10;
+                t0Slider.value = state.sf.t0;
+                y0Slider.value = state.sf.y0;
+                document.getElementById('sf-t0-val').textContent = state.sf.t0.toFixed(1);
+                document.getElementById('sf-y0-val').textContent = state.sf.y0.toFixed(1);
+                drawSlopeField();
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!canvas._coords) return;
+                const rect = canvas.getBoundingClientRect();
+                const t = canvas._coords.fromPxX(e.clientX - rect.left);
+                const yVal = sfEquations[state.sf.eq].exact(t, state.sf.t0, state.sf.y0);
+                readout.classList.remove('hidden');
+                readout.textContent = `t = ${t.toFixed(2)} | y(t) = ${yVal.toFixed(3)}`;
+            });
+
+            canvas.addEventListener('mouseleave', () => readout.classList.add('hidden'));
+        }
+
+        // -------------------------------------------------------------------------
+        // 3. MODULE 2: BRIDGE VIBRATION (2ND ORDER LINEAR ODE)
+        // -------------------------------------------------------------------------
+        function solveBridgeODE() {
+            const { m, c, k, f0, w, y0, v0 } = state.bridge;
+            const wn = Math.sqrt(k / m);
+            const zeta = c / (2 * Math.sqrt(m * k));
+
+            // Particular Solution for F0 * cos(w * t)
+            const denom = Math.hypot(k - m * w * w, c * w);
+            const isPureResonance = (c === 0 && Math.abs(w - wn) < 0.02);
+
+            let ypFunc, yp0, vp0, ypText;
+            if (isPureResonance) {
+                const coef = f0 / (2 * m * wn);
+                ypFunc = (t) => coef * t * Math.sin(wn * t);
+                yp0 = 0;
+                vp0 = 0;
+                ypText = `${coef.toFixed(2)}·t·sin(${wn.toFixed(2)}t) [RESONANSI MURNI!]`;
+            } else if (f0 === 0 || denom < 1e-6) {
+                ypFunc = () => 0;
+                yp0 = 0;
+                vp0 = 0;
+                ypText = `0`;
+            } else {
+                const Ap = f0 / denom;
+                const phi = Math.atan2(c * w, k - m * w * w);
+                ypFunc = (t) => Ap * Math.cos(w * t - phi);
+                yp0 = Ap * Math.cos(-phi);
+                vp0 = -Ap * w * Math.sin(-phi);
+                ypText = `${Ap.toFixed(2)}·cos(${w.toFixed(2)}t - ${phi.toFixed(2)})`;
+            }
+
+            // Homogeneous Initial Conditions
+            const yh0 = y0 - yp0;
+            const vh0 = v0 - vp0;
+
+            let yhFunc, yhText, rootsText, regimeLabel, regimeClass;
+
+            if (zeta < 0.999) {
+                // Underdamped
+                const alpha = c / (2 * m);
+                const wd = wn * Math.sqrt(1 - zeta * zeta);
+                const C1 = yh0;
+                const C2 = (vh0 + alpha * C1) / wd;
+                yhFunc = (t) => Math.exp(-alpha * t) * (C1 * Math.cos(wd * t) + C2 * Math.sin(wd * t));
+                yhText = `e^(-${alpha.toFixed(2)}t)[${C1.toFixed(2)}·cos(${wd.toFixed(2)}t) + ${C2.toFixed(2)}·sin(${wd.toFixed(2)}t)]`;
+                rootsText = `Akar Karakteristik: r = -${alpha.toFixed(2)} ± ${wd.toFixed(2)}i`;
+                regimeLabel = isPureResonance ? `BAHAYA RESONANSI (ζ = 0)` : `Underdamped (ζ = ${zeta.toFixed(2)})`;
+                regimeClass = isPureResonance
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200'
+                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+            } else if (zeta <= 1.001) {
+                // Critically Damped
+                const alpha = c / (2 * m);
+                const C1 = yh0;
+                const C2 = vh0 + alpha * C1;
+                yhFunc = (t) => (C1 + C2 * t) * Math.exp(-alpha * t);
+                yhText = `(${C1.toFixed(2)} + ${C2.toFixed(2)}t)·e^(-${alpha.toFixed(2)}t)`;
+                rootsText = `Akar Kembar: r₁ = r₂ = -${alpha.toFixed(2)}`;
+                regimeLabel = `Redaman Kritis (ζ = 1.00)`;
+                regimeClass = 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300';
+            } else {
+                // Overdamped
+                const disc = Math.sqrt(c * c - 4 * m * k);
+                const r1 = (-c + disc) / (2 * m);
+                const r2 = (-c - disc) / (2 * m);
+                const C1 = (vh0 - r2 * yh0) / (r1 - r2);
+                const C2 = yh0 - C1;
+                yhFunc = (t) => C1 * Math.exp(r1 * t) + C2 * Math.exp(r2 * t);
+                yhText = `${C1.toFixed(2)}·e^(${r1.toFixed(2)}t) + ${C2.toFixed(2)}·e^(${r2.toFixed(2)}t)`;
+                rootsText = `Akar Riil: r₁ = ${r1.toFixed(2)}, r₂ = ${r2.toFixed(2)}`;
+                regimeLabel = `Overdamped (ζ = ${zeta.toFixed(2)})`;
+                regimeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+            }
+
+            // Update UI labels
+            document.getElementById('br-wn-display').textContent = wn.toFixed(2);
+            document.getElementById('bridge-numeric-ode').textContent = `${m.toFixed(1)}y'' + ${c.toFixed(1)}y' + ${k.toFixed(1)}y = ${f0.toFixed(1)}·cos(${w.toFixed(2)}t)`;
+            document.getElementById('br-char-roots').textContent = rootsText;
+            document.getElementById('br-exact-formula').textContent = f0 > 0
+                ? `y(t) = ${yhText} + ${ypText}`
+                : `y(t) = ${yhText}`;
+
+            const badge = document.getElementById('bridge-regime-badge');
+            badge.textContent = regimeLabel;
+            badge.className = `px-2.5 py-0.5 rounded-lg text-xs font-bold ${regimeClass}`;
+
+            return {
+                yh: yhFunc,
+                yp: ypFunc,
+                y: (t) => yhFunc(t) + ypFunc(t)
+            };
+        }
+
+        function setBridgePreset(preset) {
+            if (preset === 'normal') {
+                Object.assign(state.bridge, { m: 2.0, c: 1.2, k: 18.0, f0: 5.0, w: 2.0, y0: 0.5, v0: 0.0, simTime: 0 });
+            } else if (preset === 'resonance') {
+                // wn = sqrt(18/2) = 3.00 rad/s
+                Object.assign(state.bridge, { m: 2.0, c: 0.2, k: 18.0, f0: 6.0, w: 3.0, y0: 0.0, v0: 0.0, simTime: 0 });
+                showToast('Peringatan: Frekuensi beban ω = ωₙ (3.00 rad/s) memicu resonansi jembatan!', 'warn');
+            } else if (preset === 'critical') {
+                // c_crit = 2 * sqrt(2 * 18) = 12.0
+                Object.assign(state.bridge, { m: 2.0, c: 12.0, k: 18.0, f0: 0.0, w: 2.0, y0: 1.2, v0: 0.0, simTime: 0 });
+                showToast('Redaman Kritis (ζ = 1): Struktur kembali diam secepat mungkin tanpa berosilasi.', 'success');
+            }
+            syncBridgeSliders();
+            drawBridgeVisuals();
+        }
+
+        function syncBridgeSliders() {
+            const b = state.bridge;
+            document.getElementById('br-m').value = b.m;
+            document.getElementById('br-c').value = b.c;
+            document.getElementById('br-k').value = b.k;
+            document.getElementById('br-f0').value = b.f0;
+            document.getElementById('br-w').value = b.w;
+            document.getElementById('br-y0').value = b.y0;
+            document.getElementById('br-v0').value = b.v0;
+
+            document.getElementById('br-m-val').textContent = `${b.m.toFixed(1)} ton`;
+            document.getElementById('br-c-val').textContent = `${b.c.toFixed(1)} kNs/m`;
+            document.getElementById('br-k-val').textContent = `${b.k.toFixed(1)} kN/m`;
+            document.getElementById('br-f0-val').textContent = `${b.f0.toFixed(1)} kN`;
+            document.getElementById('br-w-val').textContent = `${b.w.toFixed(2)} rad/s`;
+            document.getElementById('br-y0-val').textContent = `${b.y0.toFixed(1)} m`;
+            document.getElementById('br-v0-val').textContent = `${b.v0.toFixed(1)} m/s`;
+        }
+
+        function drawBridgeVisuals() {
+            const sol = solveBridgeODE();
+            const tNow = state.bridge.simTime;
+            const yNow = sol.y(tNow);
+
+            document.getElementById('br-live-telemetry').textContent =
+                `t = ${tNow.toFixed(2)} s | y(t) = ${yNow >= 0 ? '+' : ''}${yNow.toFixed(3)} m`;
+
+            // 1. Draw Animated Bridge Span
+            const animCanvas = document.getElementById('canvas-bridge-anim');
+            if (animCanvas) {
+                const { ctx, width, height } = prepareCanvas(animCanvas);
+                const isDark = state.isDark;
+                ctx.clearRect(0, 0, width, height);
+
+                const padX = 50;
+                const spanW = width - padX * 2;
+                const baseY = height * 0.55;
+                // Clamp visual deflection so extreme resonance doesn't clip off-screen completely
+                const visualDeflect = Math.max(-55, Math.min(55, yNow * 28));
+
+                // Reference Equilibrium Line
+                ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(100, 116, 139, 0.25)';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(padX, baseY);
+                ctx.lineTo(width - padX, baseY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Bridge Abutments (Piers)
+                ctx.fillStyle = isDark ? '#334155' : '#94a3b8';
+                ctx.fillRect(padX - 18, baseY, 24, height - baseY);
+                ctx.fillRect(width - padX - 6, baseY, 24, height - baseY);
+
+                // Curved Bridge Deck (Quadratic Bezier representing 1st bending mode)
+                const midX = width / 2;
+                const ctrlY = baseY + visualDeflect * 2;
+                ctx.strokeStyle = Math.abs(yNow) > 1.4 ? '#f43f5e' : '#0284c7';
+                ctx.lineWidth = 7;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(padX, baseY);
+                ctx.quadraticCurveTo(midX, ctrlY, width - padX, baseY);
+                ctx.stroke();
+
+                // Truss/Cable hangers along the deck
+                ctx.strokeStyle = isDark ? 'rgba(56, 189, 248, 0.35)' : 'rgba(2, 132, 199, 0.35)';
+                ctx.lineWidth = 1.5;
+                for (let s = 0.1; s <= 0.9; s += 0.1) {
+                    const bx = padX + s * spanW;
+                    const by = baseY + 4 * s * (1 - s) * visualDeflect;
+                    ctx.beginPath();
+                    ctx.moveTo(bx, 18);
+                    ctx.lineTo(bx, by);
+                    ctx.stroke();
+                }
+
+                // Midspan Sensor Node
+                const midDeckY = baseY + visualDeflect;
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(midX, midDeckY, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // External Force Arrow Indicator
+                if (state.bridge.f0 > 0) {
+                    const forceVal = state.bridge.f0 * Math.cos(state.bridge.w * tNow);
+                    const fLen = (forceVal / 15) * 32;
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(midX, midDeckY - 12);
+                    ctx.lineTo(midX, midDeckY - 12 - fLen);
+                    ctx.stroke();
+                }
+            }
+
+            // 2. Draw Time-Domain Graph y(t)
+            const graphCanvas = document.getElementById('canvas-bridge-graph');
+            if (graphCanvas) {
+                const { ctx, width, height } = prepareCanvas(graphCanvas);
+                const isDark = state.isDark;
+                ctx.clearRect(0, 0, width, height);
+
+                const tWindow = 14; // seconds shown
+                const tStart = Math.max(0, tNow - tWindow * 0.75);
+                const tEnd = tStart + tWindow;
+
+                // Determine dynamic Y scale
+                let maxAmp = 1.5;
+                for (let t = tStart; t <= tEnd; t += 0.1) {
+                    maxAmp = Math.max(maxAmp, Math.abs(sol.y(t)) * 1.15);
+                }
+                maxAmp = Math.min(maxAmp, 8);
+
+                const toX = (t) => ((t - tStart) / tWindow) * width;
+                const toY = (y) => height / 2 - (y / maxAmp) * (height * 0.42);
+
+                // Horizontal Zero Axis
+                ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.3)' : 'rgba(100, 116, 139, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, height / 2);
+                ctx.lineTo(width, height / 2);
+                ctx.stroke();
+
+                // Plot Homogeneous Solution yh(t)
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                for (let px = 0; px <= width; px += 3) {
+                    const t = tStart + (px / width) * tWindow;
+                    const py = toY(sol.yh(t));
+                    if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // Plot Particular Solution yp(t)
+                if (state.bridge.f0 > 0) {
+                    ctx.strokeStyle = 'rgba(245, 158, 11, 0.55)';
+                    ctx.beginPath();
+                    for (let px = 0; px <= width; px += 3) {
+                        const t = tStart + (px / width) * tWindow;
+                        const py = toY(sol.yp(t));
+                        if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                    }
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]);
+
+                // Plot Total Solution y(t)
+                ctx.strokeStyle = '#0ea5e9';
+                ctx.lineWidth = 2.8;
+                ctx.beginPath();
+                for (let px = 0; px <= width; px += 2) {
+                    const t = tStart + (px / width) * tWindow;
+                    const py = toY(sol.y(t));
+                    if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // Current Time Marker Dot
+                const cx = toX(tNow);
+                const cy = toY(yNow);
+                ctx.fillStyle = '#0ea5e9';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        function bindBridgeEvents() {
+            const bindSlider = (id, key, fmt) => {
+                document.getElementById(id).addEventListener('input', (e) => {
+                    state.bridge[key] = parseFloat(e.target.value);
+                    document.getElementById(`${id}-val`).textContent = fmt(state.bridge[key]);
+                    drawBridgeVisuals();
+                });
+            };
+            bindSlider('br-m', 'm', v => `${v.toFixed(1)} ton`);
+            bindSlider('br-c', 'c', v => `${v.toFixed(1)} kNs/m`);
+            bindSlider('br-k', 'k', v => `${v.toFixed(1)} kN/m`);
+            bindSlider('br-f0', 'f0', v => `${v.toFixed(1)} kN`);
+            bindSlider('br-w', 'w', v => `${v.toFixed(2)} rad/s`);
+            bindSlider('br-y0', 'y0', v => `${v.toFixed(1)} m`);
+            bindSlider('br-v0', 'v0', v => `${v.toFixed(1)} m/s`);
+
+            const playBtn = document.getElementById('br-toggle-play');
+            playBtn.addEventListener('click', () => {
+                state.bridge.playing = !state.bridge.playing;
+                playBtn.textContent = state.bridge.playing ? '⏸ Jeda Animasi' : '▶ Lanjutkan';
+            });
+
+            document.getElementById('br-reset-time').addEventListener('click', () => {
+                state.bridge.simTime = 0;
+                drawBridgeVisuals();
+            });
+        }
+
+        // -------------------------------------------------------------------------
+        // 4. MODULE 3: CHEMICAL REACTION SYSTEM (A -> B -> C)
+        // -------------------------------------------------------------------------
+        function drawChemSimulation() {
+            const { k1, k2, a0, b0, tInspect } = state.chem;
+            const totalMass = a0 + b0;
+
+            const concA = (t) => a0 * Math.exp(-k1 * t);
+            const concB = (t) => {
+                if (Math.abs(k1 - k2) < 1e-4) {
+                    return (b0 + k1 * a0 * t) * Math.exp(-k1 * t);
+                }
+                return b0 * Math.exp(-k2 * t) + ((k1 * a0) / (k2 - k1)) * (Math.exp(-k1 * t) - Math.exp(-k2 * t));
+            };
+            const concC = (t) => Math.max(0, totalMass - concA(t) - concB(t));
+
+            // Update analytical formulas
+            document.getElementById('ch-eq-a').textContent = `[A](t) = ${a0} · e^(-${k1.toFixed(2)}t)`;
+            if (Math.abs(k1 - k2) < 1e-4) {
+                document.getElementById('ch-eq-b').textContent = `[B](t) = (${b0} + ${(k1 * a0).toFixed(1)}t) · e^(-${k1.toFixed(2)}t)`;
+            } else {
+                const factor = (k1 * a0) / (k2 - k1);
+                document.getElementById('ch-eq-b').textContent =
+                    `[B](t) = ${b0}·e^(-${k2.toFixed(2)}t) + (${factor.toFixed(1)})·(e^(-${k1.toFixed(2)}t) - e^(-${k2.toFixed(2)}t))`;
+            }
+            document.getElementById('ch-eq-c').textContent = `[C](t) = ${totalMass} - [A](t) - [B](t)`;
+
+            // Current telemetry at tInspect
+            const aVal = concA(tInspect);
+            const bVal = concB(tInspect);
+            const cVal = concC(tInspect);
+
+            document.getElementById('ch-read-a').textContent = `${aVal.toFixed(2)} mg/L`;
+            document.getElementById('ch-read-b').textContent = `${bVal.toFixed(2)} mg/L`;
+            document.getElementById('ch-read-c').textContent = `${cVal.toFixed(2)} mg/L`;
+
+            document.getElementById('ch-bar-a').style.width = `${(aVal / totalMass) * 100}%`;
+            document.getElementById('ch-bar-b').style.width = `${(bVal / totalMass) * 100}%`;
+            document.getElementById('ch-bar-c').style.width = `${(cVal / totalMass) * 100}%`;
+
+            // Find peak [B]
+            let maxB = 0, tPeak = 0;
+            for (let t = 0; t <= 15; t += 0.05) {
+                const b = concB(t);
+                if (b > maxB) { maxB = b; tPeak = t; }
+            }
+            document.getElementById('ch-peak-info').textContent = `Puncak [B]_maks = ${maxB.toFixed(2)} mg/L pada t = ${tPeak.toFixed(2)} jam`;
+
+            // Draw Curves on Canvas
+            const canvas = document.getElementById('canvas-chem');
+            if (!canvas) return;
+            const { ctx, width, height } = prepareCanvas(canvas);
+            const isDark = state.isDark;
+            ctx.clearRect(0, 0, width, height);
+
+            const padL = 42, padR = 16, padT = 18, padB = 28;
+            const plotW = width - padL - padR;
+            const plotH = height - padT - padB;
+            const tMax = 15;
+
+            const toX = (t) => padL + (t / tMax) * plotW;
+            const toY = (val) => padT + plotH - (val / totalMass) * plotH;
+
+            // Grid & Axes
+            ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(100, 116, 139, 0.15)';
+            ctx.font = '11px JetBrains Mono';
+            ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
+            ctx.lineWidth = 1;
+
+            for (let t = 0; t <= tMax; t += 3) {
+                const x = toX(t);
+                ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
+                ctx.fillText(`${t}j`, x - 6, height - 8);
+            }
+            for (let pct = 0; pct <= 1; pct += 0.25) {
+                const val = pct * totalMass;
+                const y = toY(val);
+                ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+                ctx.fillText(`${Math.round(val)}`, 6, y + 4);
+            }
+
+            const drawCurve = (fn, color) => {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                for (let px = 0; px <= plotW; px += 2) {
+                    const t = (px / plotW) * tMax;
+                    const y = toY(fn(t));
+                    if (px === 0) ctx.moveTo(padL + px, y);
+                    else ctx.lineTo(padL + px, y);
+                }
+                ctx.stroke();
+            };
+
+            drawCurve(concA, '#f43f5e'); // Rose for [A]
+            drawCurve(concB, '#f59e0b'); // Amber for [B]
+            drawCurve(concC, '#10b981'); // Emerald for [C]
+
+            // Vertical Inspection Line at tInspect
+            const ix = toX(tInspect);
+            ctx.strokeStyle = isDark ? 'rgba(226, 232, 240, 0.5)' : 'rgba(30, 41, 59, 0.45)';
+            ctx.setLineDash([4, 4]);
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(ix, padT);
+            ctx.lineTo(ix, padT + plotH);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Dots at tInspect
+            [
+                { val: aVal, color: '#f43f5e' },
+                { val: bVal, color: '#f59e0b' },
+                { val: cVal, color: '#10b981' }
+            ].forEach(pt => {
+                ctx.fillStyle = pt.color;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(ix, toY(pt.val), 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
+        }
+
+        function bindChemEvents() {
+            const bind = (id, key, fmt) => {
+                document.getElementById(id).addEventListener('input', (e) => {
+                    state.chem[key] = parseFloat(e.target.value);
+                    document.getElementById(`${id}-val`).textContent = fmt(state.chem[key]);
+                    drawChemSimulation();
+                });
+            };
+            bind('ch-k1', 'k1', v => `${v.toFixed(2)} /jam`);
+            bind('ch-k2', 'k2', v => `${v.toFixed(2)} /jam`);
+            bind('ch-a0', 'a0', v => `${v} mg/L`);
+            bind('ch-b0', 'b0', v => `${v} mg/L`);
+            bind('ch-t', 'tInspect', v => `${v.toFixed(1)} jam`);
+        }
+
+        // -------------------------------------------------------------------------
+        // 5. MODULE 4: BEAM DEFLECTION (4TH ORDER EULER-BERNOULLI ODE)
+        // -------------------------------------------------------------------------
+        function drawBeamSimulation() {
+            const { support, L, q, EI } = state.beam;
+            const bcEl = document.getElementById('bm-bc-text');
+            const formulaEl = document.getElementById('bm-formula');
+            const maxEl = document.getElementById('bm-max-deflection');
+
+            let MFunc, yFunc, yMaxMeters;
+
+            if (support === 'simple') {
+                bcEl.innerHTML = `<div>• y(0) = 0, y(L) = 0 (Sendi & Rol)</div><div>• y''(0) = 0, y''(L) = 0 (Momen ujung = 0)</div>`;
+                formulaEl.textContent = `y(x) = -q·x·(L³ - 2Lx² + x³) / (24·EI)`;
+                MFunc = (x) => (q * x / 2) * (L - x);
+                yFunc = (x) => -(q * x / (24 * EI)) * (Math.pow(L, 3) - 2 * L * x * x + Math.pow(x, 3));
+                yMaxMeters = (5 * q * Math.pow(L, 4)) / (384 * EI);
+            } else if (support === 'cantilever') {
+                bcEl.innerHTML = `<div>• y(0) = 0, y'(0) = 0 (Tumpuan Jepit di x=0)</div><div>• y''(L) = 0, y'''(L) = 0 (Ujung Bebas di x=L)</div>`;
+                formulaEl.textContent = `y(x) = -q·x²·(6L² - 4Lx + x²) / (24·EI)`;
+                MFunc = (x) => -(q / 2) * Math.pow(L - x, 2);
+                yFunc = (x) => -(q * x * x / (24 * EI)) * (6 * L * L - 4 * L * x + x * x);
+                yMaxMeters = (q * Math.pow(L, 4)) / (8 * EI);
+            } else {
+                bcEl.innerHTML = `<div>• y(0) = 0, y'(0) = 0 (Jepit Kiri)</div><div>• y(L) = 0, y'(L) = 0 (Jepit Kanan)</div>`;
+                formulaEl.textContent = `y(x) = -q·x²·(L - x)² / (24·EI)`;
+                MFunc = (x) => -(q / 12) * (L * L - 6 * L * x + 6 * x * x);
+                yFunc = (x) => -(q * x * x * Math.pow(L - x, 2)) / (24 * EI);
+                yMaxMeters = (q * Math.pow(L, 4)) / (384 * EI);
+            }
+
+            maxEl.textContent = `Lendutan Maksimum |y|_maks = ${(yMaxMeters * 1000).toFixed(2)} mm`;
+
+            const canvas = document.getElementById('canvas-beam');
+            if (!canvas) return;
+            const { ctx, width, height } = prepareCanvas(canvas);
+            const isDark = state.isDark;
+            ctx.clearRect(0, 0, width, height);
+
+            const padX = 50;
+            const spanW = width - padX * 2;
+            const toX = (x) => padX + (x / L) * spanW;
+
+            // Two stacked panels: Top = Bending Moment M(x), Bottom = Elastic Deflection Curve y(x)
+            const topCenterY = height * 0.28;
+            const botCenterY = height * 0.72;
+
+            // --- TOP PANEL: BENDING MOMENT DIAGRAM M(x) ---
+            ctx.fillStyle = isDark ? '#94a3b8' : '#475569';
+            ctx.font = 'bold 11px Inter';
+            ctx.fillText('1. Diagram Momen Lentur M(x) = EI·y\'\'(x)', padX, 20);
+
+            ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.35)' : 'rgba(100, 116, 139, 0.35)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(padX, topCenterY); ctx.lineTo(padX + spanW, topCenterY); ctx.stroke();
+
+            const maxM = Math.max(1, (q * L * L) / 2);
+            const mScale = (height * 0.16) / maxM;
+
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.22)';
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(padX, topCenterY);
+            for (let i = 0; i <= 100; i++) {
+                const x = (i / 100) * L;
+                // Structural engineering convention: positive moment plotted downward or standard upward; let's plot intuitive upward for +M
+                const py = topCenterY - MFunc(x) * mScale;
+                ctx.lineTo(toX(x), py);
+            }
+            ctx.lineTo(padX + spanW, topCenterY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // --- BOTTOM PANEL: DEFLECTION FUNCTION y(x) ---
+            ctx.fillStyle = isDark ? '#38bdf8' : '#0284c7';
+            ctx.font = 'bold 11px Inter';
+            ctx.fillText('2. Fungsi Kurva Elastis Lendutan y(x)', padX, height * 0.52);
+
+            // Undeformed beam reference line
+            ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.35)' : 'rgba(100, 116, 139, 0.35)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(padX, botCenterY); ctx.lineTo(padX + spanW, botCenterY); ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Support Symbols
+            ctx.fillStyle = isDark ? '#cbd5e1' : '#334155';
+            if (support === 'simple') {
+                // Pin left, Roller right
+                ctx.beginPath(); ctx.moveTo(padX, botCenterY); ctx.lineTo(padX - 8, botCenterY + 14); ctx.lineTo(padX + 8, botCenterY + 14); ctx.closePath(); ctx.fill();
+                ctx.beginPath(); ctx.arc(padX + spanW, botCenterY + 7, 7, 0, Math.PI * 2); ctx.fill();
+            } else if (support === 'cantilever') {
+                ctx.fillRect(padX - 8, botCenterY - 22, 8, 44);
+            } else {
+                ctx.fillRect(padX - 8, botCenterY - 22, 8, 44);
+                ctx.fillRect(padX + spanW, botCenterY - 22, 8, 44);
+            }
+
+            // Deflected curve y(x)
+            const yScale = yMaxMeters > 0 ? (height * 0.18) / yMaxMeters : 1;
+            ctx.strokeStyle = '#0ea5e9';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            for (let i = 0; i <= 100; i++) {
+                const x = (i / 100) * L;
+                // yFunc is negative (downward), so subtract to move down in screen Y
+                const py = botCenterY - yFunc(x) * yScale;
+                if (i === 0) ctx.moveTo(toX(x), py);
+                else ctx.lineTo(toX(x), py);
+            }
+            ctx.stroke();
+        }
+
+        function bindBeamEvents() {
+            document.getElementById('bm-support').addEventListener('change', (e) => {
+                state.beam.support = e.target.value;
+                drawBeamSimulation();
+            });
+            document.getElementById('bm-l').addEventListener('input', (e) => {
+                state.beam.L = parseFloat(e.target.value);
+                document.getElementById('bm-l-val').textContent = `${state.beam.L.toFixed(1)} m`;
+                drawBeamSimulation();
+            });
+            document.getElementById('bm-q').addEventListener('input', (e) => {
+                state.beam.q = parseFloat(e.target.value);
+                document.getElementById('bm-q-val').textContent = `${state.beam.q.toFixed(1)} kN/m`;
+                drawBeamSimulation();
+            });
+            document.getElementById('bm-ei').addEventListener('input', (e) => {
+                state.beam.EI = parseFloat(e.target.value);
+                document.getElementById('bm-ei-val').textContent = `${state.beam.EI.toLocaleString('id-ID')} kNm²`;
+                drawBeamSimulation();
+            });
+        }
+
+        // -------------------------------------------------------------------------
+        // 6. MODULE 5: AI EXAM TUTOR (GEMINI API WITH EXPONENTIAL BACKOFF)
+        // -------------------------------------------------------------------------
+        async function callGeminiTutor(userPrompt) {
+            const apiKey = ""; // Runtime-provided API key
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `Anda adalah Dosen Pembimbing Persamaan Diferensial untuk mahasiswa program studi Teknik Sipil di Indonesia.
+Tugas Anda:
+1. Menjelaskan penyelesaian persamaan diferensial secara terstruktur, jelas, dan langkah demi langkah dalam Bahasa Indonesia.
+2. Selalu tekankan bahwa solusi persamaan diferensial adalah sebuah FUNGSI (misalnya y(t) atau y(x)), bukan sekadar angka tunggal, dan jelaskan makna fisisnya dalam konteks Teknik Sipil (getaran struktur, lendutan balok, hidrasi semen, atau aliran fluida/polutan).
+3. Gunakan notasi matematika teks yang rapi dan mudah dibaca (seperti e^(-2t), dy/dt, y'' + 4y' + 13y = 0).`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let attempt = 0; attempt <= delays.length; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const result = await response.json();
+                    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) return text;
+                    throw new Error('Empty response');
+                } catch (err) {
+                    if (attempt === delays.length) {
+                        return "Maaf, koneksi ke layanan Asisten AI sedang sibuk. Silakan coba lagi beberapa saat lagi atau pelajari Bank Soal Latihan UAS di sebelah kiri.";
+                    }
+                    await new Promise(res => setTimeout(res, delays[attempt]));
+                }
+            }
+        }
+
+        function appendChatMessage(role, text) {
+            const box = document.getElementById('ai-chat-history');
+            const bubble = document.createElement('div');
+            if (role === 'user') {
+                bubble.className = 'p-3 rounded-xl bg-sky-600 text-white ml-8 shadow-sm';
+                bubble.textContent = text;
+            } else {
+                bubble.className = 'p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 mr-4 whitespace-pre-wrap leading-relaxed';
+                bubble.textContent = text;
+            }
+            box.appendChild(bubble);
+            box.scrollTop = box.scrollHeight;
+            return bubble;
+        }
+
+        async function handleAiPrompt(promptText) {
+            if (!promptText.trim()) return;
+            const inputEl = document.getElementById('ai-user-input');
+            const submitBtn = document.getElementById('ai-submit-btn');
+
+            appendChatMessage('user', promptText);
+            inputEl.value = '';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Menyusun...';
+
+            const loadingBubble = appendChatMessage('ai', 'Sedang menurunkan fungsi solusi persamaan diferensial...');
+            const reply = await callGeminiTutor(promptText);
+            loadingBubble.textContent = reply;
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Kirim';
+        }
+
+        function askAiPreset(text) {
+            handleAiPrompt(text);
+        }
+
+        document.getElementById('ai-chat-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleAiPrompt(document.getElementById('ai-user-input').value);
+        });
+
+        // -------------------------------------------------------------------------
+        // 7. ANIMATION LOOP & WINDOW RESIZE HANDLING
+        // -------------------------------------------------------------------------
+        function redrawAllActive() {
+            if (state.activeTab === 'tab-concept') drawSlopeField();
+            if (state.activeTab === 'tab-bridge') drawBridgeVisuals();
+            if (state.activeTab === 'tab-chem') drawChemSimulation();
+            if (state.activeTab === 'tab-beam') drawBeamSimulation();
+        }
+
+        function mainAnimationLoop(timestamp) {
+            if (state.bridge.lastTimestamp === null) state.bridge.lastTimestamp = timestamp;
+            const dtSec = Math.min(0.05, (timestamp - state.bridge.lastTimestamp) / 1000);
+            state.bridge.lastTimestamp = timestamp;
+
+            if (state.activeTab === 'tab-bridge' && state.bridge.playing) {
+                state.bridge.simTime += dtSec;
+                drawBridgeVisuals();
+            }
+
+            requestAnimationFrame(mainAnimationLoop);
+        }
+
+        window.addEventListener('resize', redrawAllActive);
+
+        window.onload = function () {
+            bindSlopeFieldEvents();
+            bindBridgeEvents();
+            bindChemEvents();
+            bindBeamEvents();
+
+            drawSlopeField();
+            drawBridgeVisuals();
+            drawChemSimulation();
+            drawBeamSimulation();
+
+            requestAnimationFrame(mainAnimationLoop);
+        };
+    </script>
+</body>
+</html>
