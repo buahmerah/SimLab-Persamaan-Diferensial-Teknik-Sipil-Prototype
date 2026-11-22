@@ -6,8 +6,6 @@
     <title>SimLab PD — Persamaan Diferensial untuk Teknik Sipil</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- jsPDF for Direct Client-Side PDF Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Google Fonts: Inter & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -135,15 +133,14 @@
                             </h1>
                             <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
                                 Teknik Sipil
-                <!-- Right Controls: Export PDF, Theme Toggle & Quick Formula Reference -->
-                <div class="flex items-center gap-2">
-                    <button id="btn-export-pdf" title="Unduh Simulasi Aktif & Rumus ke .PDF" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span>Ekspor .PDF</span>
-                    </button>
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Laboratorium Visual Persamaan Diferensial & Persiapan UAS</p>
+                    </div>
+                </div>
 
+                <!-- Right Controls: Theme Toggle & Quick Formula Reference -->
+                <div class="flex items-center gap-2">
                     <button id="btn-cheat-sheet" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5">
                         <svg class="w-4 h-4 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -723,20 +720,10 @@
                 <!-- Curated Civil Engineering Exam Practice Problems -->
                 <div class="lg:col-span-6 space-y-4">
                     <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
-                        <div class="flex flex-wrap items-start justify-between gap-2">
-                            <div>
-                                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Bank Soal Latihan UAS Teknik Sipil</h2>
-                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                    Pelajari langkah-langkah analitik menemukan <strong>fungsi solusi</strong> dari persamaan diferensial.
-                                </p>
-                            </div>
-                            <button id="btn-export-exam-pdf" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center gap-1.5 shrink-0">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <span>Unduh Soal & Tutor .PDF</span>
-                            </button>
-                        </div>
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Bank Soal Latihan UAS Teknik Sipil</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Pelajari langkah-langkah analitik menemukan <strong>fungsi solusi</strong> dari persamaan diferensial.
+                        </p>
 
                         <div class="mt-4 space-y-3" id="exam-problems-list">
                             <!-- Problem 1 -->
@@ -2006,279 +1993,6 @@ Tugas Anda:
             e.preventDefault();
             handleAiPrompt(document.getElementById('ai-user-input').value);
         });
-
-        // -------------------------------------------------------------------------
-        // 6B. PDF EXPORT ENGINE (jsPDF) FOR SIMULATION SNAPSHOTS & EXAM NOTES
-        // -------------------------------------------------------------------------
-        function captureCanvasWithBackground(canvasId) {
-            const srcCanvas = document.getElementById(canvasId);
-            if (!srcCanvas || srcCanvas.width === 0 || srcCanvas.height === 0) return null;
-
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = srcCanvas.width;
-            tempCanvas.height = srcCanvas.height;
-            const tCtx = tempCanvas.getContext('2d');
-
-            // Fill solid background matching active theme so transparent canvas lines stay crisp
-            tCtx.fillStyle = state.isDark ? '#020617' : '#f8fafc';
-            tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            tCtx.drawImage(srcCanvas, 0, 0);
-
-            return {
-                dataUrl: tempCanvas.toDataURL('image/png'),
-                aspect: srcCanvas.height / srcCanvas.width
-            };
-        }
-
-        function exportSimulationToPDF(forcedTab = null) {
-            if (!window.jspdf || !window.jspdf.jsPDF) {
-                showToast('Pustaka PDF sedang dimuat, silakan coba beberapa detik lagi.', 'warn');
-                return;
-            }
-
-            const targetTab = forcedTab || state.activeTab;
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pageW = doc.internal.pageSize.getWidth();
-            const pageH = doc.internal.pageSize.getHeight();
-            const margin = 15;
-            const contentW = pageW - margin * 2;
-            let cursorY = 15;
-
-            const checkPageBreak = (neededHeight = 14) => {
-                if (cursorY + neededHeight > pageH - 16) {
-                    doc.addPage();
-                    cursorY = 18;
-                }
-            };
-
-            const writeWrapped = (text, fontSize = 10, style = 'normal', color = [30, 41, 59], lineH = 5) => {
-                doc.setFont('helvetica', style);
-                doc.setFontSize(fontSize);
-                doc.setTextColor(...color);
-                // Replace unicode symbols not supported by standard PDF Helvetica font
-                const sanitized = String(text)
-                    .replace(/·/g, '*')
-                    .replace(/Δ/g, 'Delta ')
-                    .replace(/ωₙ/g, 'wn')
-                    .replace(/ω/g, 'w')
-                    .replace(/ζ/g, 'zeta')
-                    .replace(/μ/g, 'mu')
-                    .replace(/θ/g, 'theta')
-                    .replace(/±/g, '+/-')
-                    .replace(/→/g, '->')
-                    .replace(/⇒/g, '=>')
-                    .replace(/≠/g, '!=')
-                    .replace(/∫/g, 'Integral ')
-                    .replace(/√/g, 'akar')
-                    .replace(/₀/g, '0')
-                    .replace(/₁/g, '1')
-                    .replace(/₂/g, '2')
-                    .replace(/₃/g, '3')
-                    .replace(/ₙ/g, 'n')
-                    .replace(/²/g, '^2')
-                    .replace(/³/g, '^3')
-                    .replace(/⁴/g, '^4');
-
-                const lines = doc.splitTextToSize(sanitized, contentW);
-                lines.forEach(line => {
-                    checkPageBreak(lineH);
-                    doc.text(line, margin, cursorY);
-                    cursorY += lineH;
-                });
-            };
-
-            const addFormulaBox = (title, formulaLines) => {
-                const boxH = 10 + formulaLines.length * 5.5;
-                checkPageBreak(boxH + 4);
-                doc.setFillColor(15, 23, 42);
-                doc.roundedRect(margin, cursorY, contentW, boxH, 2.5, 2.5, 'F');
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8.5);
-                doc.setTextColor(148, 163, 184);
-                doc.text(title.toUpperCase(), margin + 4, cursorY + 5.5);
-
-                doc.setFont('courier', 'bold');
-                doc.setFontSize(9.5);
-                doc.setTextColor(56, 189, 248);
-                formulaLines.forEach((fLine, idx) => {
-                    const cleanLine = String(fLine)
-                        .replace(/·/g, '*')
-                        .replace(/±/g, '+/-')
-                        .replace(/²/g, '^2')
-                        .replace(/³/g, '^3')
-                        .replace(/⁴/g, '^4');
-                    doc.text(cleanLine, margin + 4, cursorY + 11 + idx * 5.2);
-                });
-                cursorY += boxH + 5;
-            };
-
-            const addCanvasSnapshot = (canvasId, caption) => {
-                const snap = captureCanvasWithBackground(canvasId);
-                if (!snap) return;
-                const imgW = contentW;
-                const imgH = Math.min(88, imgW * snap.aspect);
-                checkPageBreak(imgH + 10);
-                doc.addImage(snap.dataUrl, 'PNG', margin, cursorY, imgW, imgH);
-                doc.setDrawColor(203, 213, 225);
-                doc.rect(margin, cursorY, imgW, imgH);
-                cursorY += imgH + 4;
-                writeWrapped(caption, 8.5, 'italic', [100, 116, 139], 4);
-                cursorY += 3;
-            };
-
-            // --- PDF HEADER BANNER ---
-            doc.setFillColor(2, 132, 199);
-            doc.rect(0, 0, pageW, 26, 'F');
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(15);
-            doc.setTextColor(255, 255, 255);
-            doc.text('SimLab PD — Laporan Simulasi Persamaan Diferensial', margin, 11);
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(9.5);
-            doc.setTextColor(224, 242, 254);
-            const dateStr = new Date().toLocaleDateString('id-ID', {
-                day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-            });
-            doc.text(`Program Studi Teknik Sipil | Persiapan Ujian Akhir Semester | Dicetak: ${dateStr}`, margin, 19);
-            cursorY = 34;
-
-            let fileSlug = 'SimLab_PD_Laporan';
-
-            if (targetTab === 'tab-concept') {
-                fileSlug = 'SimLab_PD_Medan_Arah_Fungsi';
-                const eqSelect = document.getElementById('sf-equation');
-                const eqText = eqSelect.options[eqSelect.selectedIndex].text;
-                const formulaText = document.getElementById('sf-analytical-formula').textContent;
-                const icText = document.getElementById('sf-ic-label').textContent;
-
-                writeWrapped('1. Modul Konsep Dasar: Angka vs. Fungsi & Medan Arah (Slope Field)', 13, 'bold', [15, 23, 42], 6.5);
-                writeWrapped('Berbeda dengan persamaan aljabar yang menghasilkan bilangan tunggal, solusi persamaan diferensial adalah sebuah FUNGSI y(t) yang kurvanya mengikuti medan arah kemiringan dy/dt di setiap titik.', 9.5, 'normal', [51, 65, 85], 4.8);
-                cursorY += 2;
-
-                addFormulaBox('Persamaan Diferensial & Fungsi Solusi Eksak', [
-                    `Model PD : ${eqText}`,
-                    `Fungsi   : ${formulaText}`,
-                    `${icText} | Langkah Euler dt = ${state.sf.dt.toFixed(2)} s`
-                ]);
-
-                addCanvasSnapshot('canvas-slope-field', 'Gambar 1: Medan arah (slope field), kurva fungsi eksak y(t), hampiran numerik Euler, dan keluarga kurva solusi.');
-            } else if (targetTab === 'tab-bridge') {
-                fileSlug = 'SimLab_PD_Getaran_Jembatan';
-                const odeText = document.getElementById('bridge-numeric-ode').textContent;
-                const regimeText = document.getElementById('bridge-regime-badge').textContent;
-                const rootsText = document.getElementById('br-char-roots').textContent;
-                const exactText = document.getElementById('br-exact-formula').textContent;
-                const wnVal = document.getElementById('br-wn-display').textContent;
-
-                writeWrapped('2. Modul Dinamika Struktur: Getaran Jembatan (PD Orde-2)', 13, 'bold', [15, 23, 42], 6.5);
-                writeWrapped(`Parameter Struktur: Massa m = ${state.bridge.m.toFixed(1)} ton, Redaman c = ${state.bridge.c.toFixed(1)} kNs/m, Kekakuan k = ${state.bridge.k.toFixed(1)} kN/m, Beban Luar F0 = ${state.bridge.f0.toFixed(1)} kN (w = ${state.bridge.w.toFixed(2)} rad/s, wn = ${wnVal} rad/s).`, 9.5, 'normal', [51, 65, 85], 4.8);
-                writeWrapped(`Status Redaman: ${regimeText} | Syarat Awal: y(0) = ${state.bridge.y0.toFixed(1)} m, y'(0) = ${state.bridge.v0.toFixed(1)} m/s.`, 9.5, 'bold', [2, 132, 199], 5);
-                cursorY += 2;
-
-                addFormulaBox('Persamaan Pengatur & Fungsi Simpangan y(t) = y_h(t) + y_p(t)', [
-                    `PD     : ${odeText}`,
-                    `Akar   : ${rootsText}`,
-                    `Solusi : ${exactText}`
-                ]);
-
-                addCanvasSnapshot('canvas-bridge-anim', 'Gambar 2A: Konfigurasi lendutan dinamis bentang jembatan pada saat inspeksi.');
-                addCanvasSnapshot('canvas-bridge-graph', 'Gambar 2B: Grafik fungsi simpangan total y(t), respon transien y_h(t), dan respon tunak y_p(t).');
-            } else if (targetTab === 'tab-chem') {
-                fileSlug = 'SimLab_PD_Reaksi_Kimia';
-                const eqA = document.getElementById('ch-eq-a').textContent;
-                const eqB = document.getElementById('ch-eq-b').textContent;
-                const eqC = document.getElementById('ch-eq-c').textContent;
-                const peakInfo = document.getElementById('ch-peak-info').textContent;
-
-                writeWrapped('3. Modul Reaksi Kimia & Hidrasi Semen (Sistem PD Orde-1)', 13, 'bold', [15, 23, 42], 6.5);
-                writeWrapped(`Parameter Kinetika: k1 = ${state.chem.k1.toFixed(2)} /jam, k2 = ${state.chem.k2.toFixed(2)} /jam, [A]0 = ${state.chem.a0} mg/L, [B]0 = ${state.chem.b0} mg/L. ${peakInfo}.`, 9.5, 'normal', [51, 65, 85], 4.8);
-                cursorY += 2;
-
-                addFormulaBox('Solusi Sistem Tiga Fungsi Konsentrasi Terikat', [eqA, eqB, eqC]);
-                addCanvasSnapshot('canvas-chem', 'Gambar 3: Kurva evolusi fungsi konsentrasi [A](t), [B](t), dan [C](t) terhadap waktu.');
-            } else if (targetTab === 'tab-beam') {
-                fileSlug = 'SimLab_PD_Lendutan_Balok';
-                const supportLabel = document.getElementById('bm-support').selectedOptions[0].text;
-                const formulaText = document.getElementById('bm-formula').textContent;
-                const maxDefText = document.getElementById('bm-max-deflection').textContent;
-                const bcLines = Array.from(document.getElementById('bm-bc-text').children).map(el => el.textContent);
-
-                writeWrapped('4. Modul Analisis Struktur: Lendutan Balok Euler-Bernoulli (PD Orde-4)', 13, 'bold', [15, 23, 42], 6.5);
-                writeWrapped(`Tumpuan: ${supportLabel} | Bentang L = ${state.beam.L.toFixed(1)} m | Beban Merata q = ${state.beam.q.toFixed(1)} kN/m | Kekakuan EI = ${state.beam.EI.toLocaleString('id-ID')} kNm^2.`, 9.5, 'normal', [51, 65, 85], 4.8);
-                bcLines.forEach(line => writeWrapped(line, 9, 'normal', [71, 85, 105], 4.5));
-                cursorY += 2;
-
-                addFormulaBox('Fungsi Kurva Elastis y(x) dari Integrasi EI * y\'\'\'\' = -q', [
-                    formulaText,
-                    maxDefText
-                ]);
-                addCanvasSnapshot('canvas-beam', 'Gambar 4: Diagram Momen Lentur M(x) dan Fungsi Kurva Elastis Lendutan Balok y(x).');
-            } else if (targetTab === 'tab-exam') {
-                fileSlug = 'SimLab_PD_Bank_Soal_UAS';
-                writeWrapped('5. Bank Soal Latihan UAS Teknik Sipil & Pembahasan Analitik', 13, 'bold', [15, 23, 42], 6.5);
-                cursorY += 2;
-
-                const detailsList = document.querySelectorAll('#exam-problems-list details');
-                detailsList.forEach((det) => {
-                    const title = det.querySelector('summary span')?.textContent || 'Soal Latihan';
-                    const bodyBlocks = det.querySelectorAll('div > p, div > div > div');
-                    checkPageBreak(22);
-                    writeWrapped(title, 10.5, 'bold', [2, 132, 199], 5.5);
-                    bodyBlocks.forEach(blk => {
-                        writeWrapped(blk.textContent.trim(), 9, 'normal', [30, 41, 59], 4.5);
-                    });
-                    cursorY += 3;
-                });
-
-                // Include AI Tutor conversation history if user has asked questions
-                const chatBubbles = document.querySelectorAll('#ai-chat-history > div');
-                if (chatBubbles.length > 1) {
-                    checkPageBreak(18);
-                    writeWrapped('Catatan Diskusi & Latihan Tambahan Bersama Asisten Dosen AI:', 11, 'bold', [15, 23, 42], 6);
-                    chatBubbles.forEach((b, i) => {
-                        if (i === 0) return; // skip initial greeting
-                        const isUser = b.classList.contains('bg-sky-600');
-                        writeWrapped(
-                            `${isUser ? '[Mahasiswa]' : '[Tutor AI]'}: ${b.textContent.trim()}`,
-                            9,
-                            isUser ? 'bold' : 'normal',
-                            isUser ? [2, 132, 199] : [30, 41, 59],
-                            4.5
-                        );
-                        cursorY += 2;
-                    });
-                }
-            }
-
-            // Always append a concise UAS Formula Quick-Reference section
-            checkPageBreak(42);
-            cursorY += 2;
-            writeWrapped('Ringkasan Cepat Metode Penyelesaian Persamaan Diferensial (Persiapan UAS)', 11, 'bold', [15, 23, 42], 6);
-            addFormulaBox('Panduan Memilih Bentuk Fungsi Solusi', [
-                '1. PD Orde-1 Linear (y\' + P(x)y = Q(x)) : mu(x) = e^(Integral P(x)dx)',
-                '2. PD Orde-2 Akar Riil Berbeda (r1 != r2) : y(t) = C1*e^(r1*t) + C2*e^(r2*t)',
-                '3. PD Orde-2 Akar Riil Kembar (r1 = r2)   : y(t) = (C1 + C2*t)*e^(r*t)',
-                '4. PD Orde-2 Akar Kompleks (a +/- bi)    : y(t) = e^(a*t)*(C1*cos(bt) + C2*sin(bt))'
-            ]);
-
-            // Footer page numbers
-            const totalPages = doc.internal.getNumberOfPages();
-            for (let p = 1; p <= totalPages; p++) {
-                doc.setPage(p);
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8);
-                doc.setTextColor(148, 163, 184);
-                doc.text(`SimLab PD Teknik Sipil — Halaman ${p} dari ${totalPages}`, margin, pageH - 8);
-            }
-
-            doc.save(`${fileSlug}.pdf`);
-            showToast(`Berhasil mengekspor ${fileSlug}.pdf!`, 'success');
-        }
-
-        document.getElementById('btn-export-pdf').addEventListener('click', () => exportSimulationToPDF());
-        document.getElementById('btn-export-exam-pdf').addEventListener('click', () => exportSimulationToPDF('tab-exam'));
 
         // -------------------------------------------------------------------------
         // 7. ANIMATION LOOP & WINDOW RESIZE HANDLING
